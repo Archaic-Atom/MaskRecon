@@ -27,5 +27,5 @@ CUDA_VISIBLE_DEVICES=0 python -u Source/main.py \
                         --resultImgDir ./ResultImg/\
                         --modelDir ./Checkpoint/ \
                         --dataset thuman2.0 \
-                        --save_mesh False
+                        --save_mesh True
 echo "Finish!"

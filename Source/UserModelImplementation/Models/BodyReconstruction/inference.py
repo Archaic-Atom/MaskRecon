@@ -123,7 +123,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                     fake_prob_depth = self.disc_depth(self.output_G_depth)
                     return [color_front, depth_front, normal_pre, fake_prob_color, fake_prob_depth] 
             
-            return [color_front, depth_front, normal_pre]
+            return [color_front, depth_front, normal_pre, input_data[self.COLOR_ID], input_data[self.DEPTH_ID]]
 
         #if self.MODEL_DEPTH_ID == model_id:
         #    depth_front = model(input_data[self.COLOR_ID], 

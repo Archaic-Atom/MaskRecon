@@ -79,8 +79,10 @@ class BodyDataloader(jf.UserTemplate.DataHandlerTemplate):
                                     output_data[2].detach().cpu().numpy(),
                                     img_id, args.dataset, supplement)
             if args.save_mesh == True:
-                self.__saver.save_output_mesh(output_data[0].detach().cpu().numpy(),
+                self.__saver.save_output_mesh_2(output_data[0].detach().cpu().numpy(),
                                     output_data[1].detach().cpu().numpy(),
+                                    output_data[3].detach().cpu().numpy(),
+                                    output_data[4].detach().cpu().numpy(),
                                    img_id, args.dataset, supplement)
 
             
