@@ -6,7 +6,7 @@ import numpy as np
 import sys
 sys.path.append("./Source/UserModelImplementation/Models/BodyReconstruction")
 import ops
-
+import torch.nn.functional as F
 
 class PatchDisNet(nn.Module):
     def __init__(self, channel, ngf):
@@ -45,7 +45,7 @@ class PatchDisNet(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, in_channel, out_channel, ngf, upconv=False, norm=False):
+    def __init__(self, in_channel=3, out_channel=3, ngf=64, upconv=False, norm=False):
         super(UNet, self).__init__()
         self.in_channel = in_channel
         self.out_channel = out_channel
@@ -53,171 +53,6 @@ class UNet(nn.Module):
         self.norm = norm
         self.upconv = upconv
 
-        if self.norm:
-            self.n0 = torch.nn.InstanceNorm2d(self.ngf * 2)
-            self.n1 = torch.nn.InstanceNorm2d(self.ngf * 4)
-            self.n2 = torch.nn.InstanceNorm2d(self.ngf * 8)
-            self.n3 = torch.nn.InstanceNorm2d(self.ngf * 16)
-            self.n3u = torch.nn.InstanceNorm2d(self.ngf * 8)
-            self.n2u = torch.nn.InstanceNorm2d(self.ngf * 4)
-            self.n1u = torch.nn.InstanceNorm2d(self.ngf * 2)
-        if self.upconv:
-            self.u3 = nn.ConvTranspose2d(self.ngf * 16, self.ngf * 16, 3, padding=1, output_padding=1, stride=2)
-            self.u2 = nn.ConvTranspose2d(self.ngf * 8, self.ngf * 8, 3, padding=1, output_padding=1, stride=2)
-            self.u1 = nn.ConvTranspose2d(self.ngf * 4, self.ngf * 4, 3, padding=1, output_padding=1, stride=2)
-            self.u0 = nn.ConvTranspose2d(self.ngf * 2, self.ngf * 2, 3, padding=1, output_padding=1, stride=2)
-
-        # size -> size / 2
-        self.l0 = nn.Sequential(
-            nn.Conv2d(self.in_channel, self.ngf, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf, self.ngf * 2, 3, padding=1, stride=2),
-            nn.ELU()
-        )
-
-        # size / 2 -> size / 4
-        self.l1 = nn.Sequential(
-            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 2, self.ngf * 4, 3, padding=1, stride=2),
-            nn.ELU()
-        )
-
-        # size / 4 -> size / 8
-        self.l2 = nn.Sequential(
-            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 4, self.ngf * 8, 3, padding=1, stride=2),
-            nn.ELU()
-        )
-
-        # size / 8 -> size / 16
-        self.l3 = nn.Sequential(
-            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 8, self.ngf * 16, 3, padding=1, stride=2),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
-        )
-
-        self.block1 = nn.Sequential(
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
-        )
-
-        self.block2 = nn.Sequential(
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
-        )
-
-        # size / 16 -> size / 8
-        self.l3u = nn.Sequential(
-            nn.Conv2d(self.ngf * 24, self.ngf * 8, 1, padding=0, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
-            nn.ELU()
-        )
-
-        # size / 8 -> size / 4
-        self.l2u = nn.Sequential(
-            nn.Conv2d(self.ngf * 12, self.ngf * 4, 1, padding=0, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
-            nn.ELU()
-        )
-
-        # size / 4 -> size / 2
-        self.l1u = nn.Sequential(
-            nn.Conv2d(self.ngf * 6, self.ngf * 2, 1, padding=0, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
-            nn.ELU()
-        )
-
-        # size / 2 -> size
-        self.l0u = nn.Sequential(
-            nn.Conv2d(self.ngf * 2, self.ngf, 1, padding=0, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf, self.ngf, 3, padding=1, stride=1),
-            nn.ELU(),
-            nn.Conv2d(self.ngf, self.out_channel, 3, padding=1, stride=1),
-            nn.Tanh()
-        )
-
-        for m in self.modules():
-            ops.weights_init(m)
-
-    def forward(self, input_data, inter_mode='nearest'):
-        x0 = self.l0(input_data)
-        if self.norm:
-            x0 = self.n0(x0)
-        x1 = self.l1(x0)
-        if self.norm:
-            x1 = self.n1(x1)
-        x2 = self.l2(x1)
-        if self.norm:
-            x2 = self.n2(x2)
-        x3 = self.l3(x2)
-        if self.norm:
-            x3 = self.n3(x3)
-        x3 = self.block1(x3) + x3
-        x3 = self.block2(x3) + x3
-        if self.upconv:
-            x3u = nn.functional.interpolate(self.u3(x3), size=x2.shape[2:4], mode=inter_mode)
-        else:
-            x3u = nn.functional.interpolate(x3, size=x2.shape[2:4], mode=inter_mode)
-        x3u = self.l3u(torch.cat((x3u, x2), dim=1))
-        if self.norm:
-            x3u = self.n3u(x3u)
-
-        if self.upconv:
-            x2u = nn.functional.interpolate(self.u2(x3u), size=x1.shape[2:4], mode=inter_mode)
-        else:
-            x2u = nn.functional.interpolate(x3u, size=x1.shape[2:4], mode=inter_mode)
-        x2u = self.l2u(torch.cat((x2u, x1), dim=1))
-        if self.norm:
-            x2u = self.n2u(x2u)
-
-        if self.upconv:
-            x1u = nn.functional.interpolate(self.u1(x2u), size=x0.shape[2:4], mode=inter_mode)
-        else:
-            x1u = nn.functional.interpolate(x2u, size=x0.shape[2:4], mode=inter_mode)
-        x1u = self.l1u(torch.cat((x1u, x0), dim=1))
-        if self.norm:
-            x1u = self.n1u(x1u)
-
-        if self.upconv:
-            x0u = nn.functional.interpolate(self.u0(x1u), size=input_data.shape[2:4], mode=inter_mode)
-        else:
-            x0u = nn.functional.interpolate(x1u, size=input_data.shape[2:4], mode=inter_mode)
-        x0u = self.l0u(x0u)
-        return x0u
-
-
-class SUNet(nn.Module):
-    def __init__(self, in_channel, out_channel, ngf, upconv=False, norm=False):
-        super(SUNet, self).__init__()
-        self.in_channel = in_channel
-        self.out_channel = out_channel
-        self.ngf = ngf
-        self.norm = norm
-        self.upconv = upconv
 
         if self.norm:
             self.n0 = torch.nn.InstanceNorm2d(self.ngf * 2)
@@ -232,6 +67,7 @@ class SUNet(nn.Module):
             self.u2 = nn.ConvTranspose2d(self.ngf * 8, self.ngf * 8, 3, padding=1, output_padding=1, stride=2)
             self.u1 = nn.ConvTranspose2d(self.ngf * 4, self.ngf * 4, 3, padding=1, output_padding=1, stride=2)
             self.u0 = nn.ConvTranspose2d(self.ngf * 2, self.ngf * 2, 3, padding=1, output_padding=1, stride=2)
+
 
         # size -> size / 2
         self.l0 = nn.Sequential(
@@ -326,8 +162,173 @@ class SUNet(nn.Module):
             nn.Tanh()
         )
 
-        for m in self.modules():
-            ops.weights_init(m)
+        #for m in self.modules():
+         #   ops.weights_init(m)
+
+    def forward(self, x1, inter_mode='nearest'):
+        #x0 = self.l0(input_data)
+        #if self.norm:
+        #    x0 = self.n0(x0)
+        #x1 = self.l1(x0)
+        #if self.norm:
+        #    x1 = self.n1(x1)
+        x2 = self.l2(x1)
+        if self.norm:
+            x2 = self.n2(x2)
+        x3 = self.l3(x2)
+        if self.norm:
+            x3 = self.n3(x3)
+        x3 = self.block1(x3) + x3
+        x3 = self.block2(x3) + x3
+        if self.upconv:
+            x3u = nn.functional.interpolate(self.u3(x3), size=x2.shape[2:4], mode=inter_mode)
+        else:
+            x3u = nn.functional.interpolate(x3, size=x2.shape[2:4], mode=inter_mode)
+        x3u = self.l3u(torch.cat((x3u, x2), dim=1))
+        if self.norm:
+            x3u = self.n3u(x3u)
+        if self.upconv:
+            x2u = nn.functional.interpolate(self.u2(x3u), size=x1.shape[2:4], mode=inter_mode)
+        else:
+            x2u = nn.functional.interpolate(x3u, size=x1.shape[2:4], mode=inter_mode)
+        x2u = self.l2u(torch.cat((x2u, x1), dim=1))
+        if self.norm:
+            x2u = self.n2u(x2u)
+        if self.upconv:
+            x1u = nn.functional.interpolate(self.u1(x2u), size=[x1.size()[2] * 2, x1.size()[3] * 2], mode=inter_mode)
+        else:
+            x1u = nn.functional.interpolate(x2u, size=[x1.size()[2] * 2, x1.size()[3] * 2], mode=inter_mode)
+        x1u = self.l1u(x1u)
+        if self.norm:
+            x1u = self.n1u(x1u)
+        if self.upconv:
+            x0u = nn.functional.interpolate(self.u0(x1u), size=[x1.size()[2] * 4, x1.size()[3] * 4], mode=inter_mode)
+        else:
+            x0u = nn.functional.interpolate(x1u, size=[x1.size()[2] * 4, x1.size()[3] * 4], mode=inter_mode)
+        x0u = self.l0u(x0u)
+        return x0u
+
+
+class SUNet(nn.Module):
+    def __init__(self, in_channel, out_channel, ngf, upconv=False, norm=False, mask=False):
+        super(SUNet, self).__init__()
+        self.in_channel = in_channel
+        self.out_channel = out_channel
+        self.ngf = ngf
+        self.norm = norm
+        self.upconv = upconv
+        self.mask = mask
+
+        if self.norm:
+            self.n0 = torch.nn.InstanceNorm2d(self.ngf * 2)
+            self.n1 = torch.nn.InstanceNorm2d(self.ngf * 4)
+            self.n2 = torch.nn.InstanceNorm2d(self.ngf * 8)
+            self.n3 = torch.nn.InstanceNorm2d(self.ngf * 16)
+            self.n3u = torch.nn.InstanceNorm2d(self.ngf * 8)
+            self.n2u = torch.nn.InstanceNorm2d(self.ngf * 4)
+            self.n1u = torch.nn.InstanceNorm2d(self.ngf * 2)
+        if self.upconv:
+            self.u3 = nn.ConvTranspose2d(self.ngf * 16, self.ngf * 16, 3, padding=1, output_padding=1, stride=2)
+            self.u2 = nn.ConvTranspose2d(self.ngf * 8, self.ngf * 8, 3, padding=1, output_padding=1, stride=2)
+            self.u1 = nn.ConvTranspose2d(self.ngf * 4, self.ngf * 4, 3, padding=1, output_padding=1, stride=2)
+            self.u0 = nn.ConvTranspose2d(self.ngf * 2, self.ngf * 2, 3, padding=1, output_padding=1, stride=2)
+        if self.mask:
+            self.recovery_size_x8_depth = RecoverySizeX8_depth()
+        # size -> size / 2
+        self.l0 = nn.Sequential(
+            nn.Conv2d(self.in_channel, self.ngf, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf, self.ngf * 2, 3, padding=1, stride=2),
+            nn.ELU()
+        )
+
+        # size / 2 -> size / 4
+        self.l1 = nn.Sequential(
+            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 2, self.ngf * 4, 3, padding=1, stride=2),
+            nn.ELU()
+        )
+
+        # size / 4 -> size / 8
+        self.l2 = nn.Sequential(
+            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 4, self.ngf * 8, 3, padding=1, stride=2),
+            nn.ELU()
+        )
+
+        # size / 8 -> size / 16
+        self.l3 = nn.Sequential(
+            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 8, self.ngf * 16, 3, padding=1, stride=2),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
+        )
+
+        self.block1 = nn.Sequential(
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
+        )
+
+        self.block2 = nn.Sequential(
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 16, self.ngf * 16, 3, padding=1, stride=1)
+        )
+
+        # size / 16 -> size / 8
+        self.l3u = nn.Sequential(
+            nn.Conv2d(self.ngf * 24, self.ngf * 8, 1, padding=0, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 8, self.ngf * 8, 3, padding=1, stride=1),
+            nn.ELU()
+        )
+
+        # size / 8 -> size / 4
+        self.l2u = nn.Sequential(
+            nn.Conv2d(self.ngf * 12, self.ngf * 4, 1, padding=0, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 4, self.ngf * 4, 3, padding=1, stride=1),
+            nn.ELU()
+        )
+
+        # size / 4 -> size / 2
+        self.l1u = nn.Sequential(
+            nn.Conv2d(self.ngf * 4, self.ngf * 2, 1, padding=0, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf * 2, self.ngf * 2, 3, padding=1, stride=1),
+            nn.ELU()
+        )
+
+        # size / 2 -> size
+        self.l0u = nn.Sequential(
+            nn.Conv2d(self.ngf * 2, self.ngf, 1, padding=0, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf, self.ngf, 3, padding=1, stride=1),
+            nn.ELU(),
+            nn.Conv2d(self.ngf, self.out_channel, 3, padding=1, stride=1),
+            nn.Tanh()
+        )
+
+        #for m in self.modules():
+        #    ops.weights_init(m)
 
     def forward(self, input_data, inter_mode='nearest'):
         x0 = self.l0(input_data)
@@ -337,6 +338,7 @@ class SUNet(nn.Module):
         if self.norm:
             x1 = self.n1(x1)
         x2 = self.l2(x1)
+        x22 = x2
         if self.norm:
             x2 = self.n2(x2)
         x3 = self.l3(x2)
@@ -373,8 +375,103 @@ class SUNet(nn.Module):
         else:
             x0u = nn.functional.interpolate(x1u, size=input_data.shape[2:4], mode=inter_mode)
         x0u = self.l0u(x0u)
+
+        if self.training and self.mask:
+            recovery_img_x8 = self.recovery_size_x8_depth(x22)
+            return x0u, recovery_img_x8
         return x0u
 
+def convbn(in_planes, out_planes, kernel_size, stride, pad, dilation):
+
+    return nn.Sequential(nn.Conv2d(in_planes, out_planes,
+                                   kernel_size=kernel_size, stride=stride,
+                                   padding=dilation if dilation > 1 else pad, dilation = dilation, bias=False),
+                         nn.BatchNorm2d(out_planes))
+
+class RecoverySizeX8(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_0 = nn.Sequential(convbn(512, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True))
+        self.conv_1 = nn.Sequential(convbn(64, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(16, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(16, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True))
+        self.conv_2 = nn.Sequential(convbn(16, 3, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(3, 3, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(3, 3, kernel_size=3, padding=1, stride=1, bias=False))
+
+    def forward(self, x):
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_0(x)
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_1(x)
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_2(x)
+        x = torch.sigmoid(x)
+        return x
+
+class RecoverySizeX4(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_0 = nn.Sequential(convbn(256, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True))
+        self.conv_1 = nn.Sequential(convbn(64, 3, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(3, 3, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(3, 3, kernel_size=3, padding=1, stride=1, bias=False))
+
+    def forward(self, x):
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_0(x)
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_1(x)
+        x = torch.sigmoid(x)
+        return x
+
+class RecoverySizeX8_depth(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv_0 = nn.Sequential(convbn(512, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(64, 64, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True))
+        self.conv_1 = nn.Sequential(convbn(64, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(16, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(16, 16, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True))
+        self.conv_2 = nn.Sequential(convbn(16, 1, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    convbn(1, 1, 3, 1, 1, 1),
+                                    nn.ReLU(inplace=True),
+                                    nn.Conv2d(1, 1, kernel_size=3, padding=1, stride=1, bias=False))
+
+    def forward(self, x):
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_0(x)
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_1(x)
+        x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
+        x = self.conv_2(x)
+        x = torch.sigmoid(x)
+        return x
 
 class FUNet(nn.Module):
     def __init__(self, in_channel, out_channel, ngf, upconv=False, norm=False):
@@ -620,3 +717,16 @@ class FUNet(nn.Module):
         # xu = self.lxu(xu)
         return x0u
 
+
+class FeatureFusion(nn.Module):
+    def __init__(self):
+        super(FeatureFusion, self).__init__()
+        self.conv = nn.Sequential(convbn(256, 256, 3, 1, 1, 1),
+                                    convbn(256, 256, 3, 1, 1, 1))
+
+    def forward(self, x, y):
+        y1 = self.conv(y)
+        y2 = self.conv(y)
+        x = x * y1
+        x = x + y2
+        return x

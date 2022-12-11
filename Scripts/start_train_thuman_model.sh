@@ -13,24 +13,24 @@ if [ -d "${tensorboard_folder}" ]; then
 fi
 
 echo "Begin to train the model!"
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u Source/main.py \
-                        --mode train \
-                        --batchSize 32 \
-                        --gpu 4 \
-                        --trainListPath ./Datasets/thuman_training_list_100.csv \
-                        --imgWidth 256 \
-                        --imgHeight 256 \
-                        --dataloaderNum 0 \
-                        --maxEpochs 100 \
-                        --imgNum 6000 \
-                        --sampleNum 1 \
-                        --log ${tensorboard_folder} \
-                        --lr 0.001 \
-                        --dist false \
-                        --modelName BodyReconstruction \
-                        --modelDir ./Checkpoint/ \
-                        --port ${dist_port} \
-                        --dataset thuman2.0 > TrainRun.log 2>&1 &
+CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u ./Source/main.py\
+                              --mode train --batchSize 16 \
+                              --gpu 4 \
+                              --trainListPath ./Datasets/thuman2_3_training_list_all.csv \
+                              --imgWidth 256 \
+                              --imgHeight 256 \
+                              --dataloaderNum 0 \
+                              --maxEpochs 10 \
+                              --imgNum 53520 \
+                              --sampleNum 1 \
+                              --log ${tensorboard_folder} \
+                              --lr 0.001 \
+                              --dist false \
+                              --modelName BodyReconstruction \
+                              --modelDir ./Checkpoint_mask_size_2_ratio_0.05_loss_0.25_2/ \
+                              --port ${dist_port} \
+                              --mask true \
+                              --dataset thuman2.0 > TrainRun.log 2>&1 &
 echo "You can use the command (>> tail -f TrainRun.log) to watch the training process!"
 
 echo "Start the tensorboard at port:" ${tensorboard_port}

@@ -1,0 +1,3 @@
+color_img,depth_img,uv_img,color_gt,depth_gt
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_02.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_02.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_02.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_01.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_01_1.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_01.png,,

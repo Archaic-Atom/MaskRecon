@@ -1,0 +1,7 @@
+color_img,depth_img,uv_img,color_gt,depth_gt
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_08.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_08.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_08.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_09.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_09.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_09.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_10.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_10.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_10.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_11.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/img_rgb.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_11.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_12.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_12.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_12.png,,
+/home/lixing/Programs/BodyReconstruction_fb_2/Sample/rgb_13.jpg,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/depth_13.png,/home/lixing/Programs/BodyReconstruction_fb_2/Sample/uv_13.png,,

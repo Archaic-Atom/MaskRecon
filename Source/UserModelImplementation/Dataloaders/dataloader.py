@@ -11,8 +11,10 @@ from .data_saver import DataSaver
 ID_COLOR = 0
 ID_DEPTH = 1
 ID_UV = 2
-ID_COLOR_GT =3
-ID_DEPTH_GT =4
+ID_COLOR_GT = 3
+ID_DEPTH_GT = 4
+ID_MASK_COLOR_GT = 5
+ID_MASK_DEPTH_GT = 6
 #testing
 
 class BodyDataloader(jf.UserTemplate.DataHandlerTemplate):
@@ -45,8 +47,8 @@ class BodyDataloader(jf.UserTemplate.DataHandlerTemplate):
         self.__start_time = time.time()
         if is_training:
             # return input_data_list, label_data_list
-             return [batch_data[ID_COLOR], batch_data[ID_DEPTH], batch_data[ID_UV], batch_data[ID_COLOR_GT], batch_data[ID_DEPTH_GT]], \
-                  [batch_data[ID_COLOR_GT], batch_data[ID_DEPTH_GT]]
+             return [batch_data[ID_COLOR], batch_data[ID_DEPTH], batch_data[ID_UV], batch_data[ID_COLOR_GT], batch_data[ID_DEPTH_GT], batch_data[ID_MASK_COLOR_GT], batch_data[ID_MASK_DEPTH_GT]], \
+                  [batch_data[ID_COLOR_GT], batch_data[ID_DEPTH_GT], batch_data[ID_MASK_COLOR_GT], batch_data[ID_MASK_DEPTH_GT]]
             # return input_data, supplement
         return [batch_data[ID_COLOR], batch_data[ID_DEPTH], batch_data[ID_UV]], []
 
@@ -74,16 +76,21 @@ class BodyDataloader(jf.UserTemplate.DataHandlerTemplate):
             #self.model0_res = output_data[0].detach().cpu().numpy()
             self.__saver.save_output_color(output_data[0].detach().cpu().numpy(),
                                     img_id, args.dataset, supplement)
-
-            self.__saver.save_output_depth(output_data[1].detach().cpu().numpy(),
-                                    output_data[2].detach().cpu().numpy(),
-                                    img_id, args.dataset, supplement)
-            if args.save_mesh == True:
-                self.__saver.save_output_mesh_2(output_data[0].detach().cpu().numpy(),
+            self.color_back = output_data[0].detach().cpu().numpy()
+            self.color_front = output_data[1].detach().cpu().numpy()
+        if model_id ==1:
+            self.__saver.save_output_depth(output_data[0].detach().cpu().numpy(),
                                     output_data[1].detach().cpu().numpy(),
-                                    output_data[3].detach().cpu().numpy(),
-                                    output_data[4].detach().cpu().numpy(),
-                                   img_id, args.dataset, supplement)
+                                    img_id, args.dataset, supplement)
+            self.depth_back = output_data[0].detach().cpu().numpy()
+            self.depth_front = output_data[2].detach().cpu().numpy()
+            print("self.depth_back", self.depth_back.shape)
+            if args.save_mesh == True:
+                self.__saver.save_output_mesh_2(self.color_back, 
+                                            self.depth_back, 
+                                            self.color_front, 
+                                            self.depth_front, 
+                                            img_id, args.dataset, supplement)
 
             
         

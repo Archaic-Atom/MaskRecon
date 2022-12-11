@@ -3,63 +3,81 @@ import torch.nn as nn
 import functools
 #import sys
 #sys.path.append("./Source/UserModelImplementation/Models/BodyReconstruction")
-from .submodel import UNet, SUNet
+from .submodel import UNet, SUNet, RecoverySizeX4, FeatureFusion
+from .extractor import BasicEncoder
 
 class ColorModel(nn.Module):
     """docstring for ColorModel"""
 
-    def __init__(self, in_channel: int, ngf: int) -> object:
+    def __init__(self, ngf: int, mask: bool) -> object:
         super().__init__()
+        self.mask = mask
+        self.dropout = 0
+
+        self.color_extarction = BasicEncoder(input_dim=3, output_dim=256, norm_fn='instance', dropout=self.dropout)
+        self.recovery_net = RecoverySizeX4()
+        self.condition_extraction = BasicEncoder(input_dim=4, output_dim=256, norm_fn='instance', dropout=self.dropout)
+        self.feature_fusion = FeatureFusion()
+        self.color_net = UNet(out_channel=3, ngf=ngf, upconv=False, norm=True)
         
-        #self.color_net = submodel.UNet(in_channel, 3, ngf)
-        self.color_net = UNet(in_channel, out_channel=3, ngf=ngf, upconv=False, norm=True)
     
     
     def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
         #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
         #                         inter_mode='bilinear')
-        color_front = self.color_net(torch.cat((color_img, depth_img, uv_img), dim=1))
-        #print(depth_front.shape)
-
+        color_feature = self.color_extarction(color_img)
+        condition_feature = self.condition_extraction(torch.cat((depth_img, uv_img), dim=1))       
+        all_feature = self.feature_fusion(color_feature, condition_feature)
+        color_front = self.color_net(all_feature)
+        if self.training and self.mask:
+            recovery_color = self.recovery_net(color_feature)
+            return [color_front, recovery_color]
         return color_front
 
 class DepthModel(nn.Module):
     """docstring for DepthMode"""
 
-    def __init__(self, in_channel: int, ngf: int) -> object:
+    def __init__(self, in_channel: int, ngf: int, mask: bool) -> object:
         super().__init__()
-        
+        self.mask = mask
         #self.color_net = submodel.UNet(in_channel, 3, ngf)
-        self.depth_net = SUNet(in_channel, out_channel=1, ngf=ngf, upconv=False, norm=True)
+        self.depth_net = SUNet(in_channel, out_channel=1, ngf=ngf, upconv=False, norm=True, mask=self.mask)
         
     
     def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
         #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
         #                         inter_mode='bilinear')
-        depth_front = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
-        #print(depth_front.shape)
-
-        return depth_front
+        if self.training and self.mask:
+            depth_front, recovery_depth = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
+            return [depth_front, recovery_depth]
+        else:
+            depth_front = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
+            return depth_front
 
 class GeneratorModel(nn.Module):
     """docstring for DepthMode"""
 
-    def __init__(self, in_channel: int, ngf: int) -> object:
+    def __init__(self, in_channel: int, ngf: int, mask: bool) -> object:
         super().__init__()
-        
+        self.mask = mask
         #self.color_net = submodel.UNet(in_channel, 3, ngf)
-        self.color_net = UNet(in_channel, out_channel=3, ngf=ngf, upconv=False, norm=True)
+        self.color_net = UNet(in_channel, out_channel=3, ngf=ngf, upconv=False, norm=True, mask=mask)
         self.depth_net = SUNet(in_channel, out_channel=1, ngf=ngf, upconv=False, norm=True)
         
     
     def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
         #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
         #                         inter_mode='bilinear')
+        #if self.mask:
+        #    color_front, recovery_color = self.color_net(torch.cat((color_img, depth_img, uv_img), dim=1))
+        #    depth_front = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
+        #    return [color_front, depth_front, recovery_color]
+        #else:
         color_front = self.color_net(torch.cat((color_img, depth_img, uv_img), dim=1))
         depth_front = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
-        #print(depth_front.shape)
+        return [color_front, depth_front]
 
-        return color_front, depth_front
+            
 
 class NLayerDiscriminator(nn.Module):
     """Defines a PatchGAN discriminator"""

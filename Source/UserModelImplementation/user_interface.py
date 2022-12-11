@@ -29,6 +29,9 @@ class UserInterface(jf.UserTemplate.NetWorkInferenceTemplate):
         parser.add_argument('--save_mesh', type=UserInterface.__str2bool,
                             default=user_def.SAVE_MESH,
                             help='save or not save mesh')
+        parser.add_argument('--mask', type=UserInterface.__str2bool,
+                            default=user_def.MASK_OPT,
+                            help='save or not save mesh')
         return parser
 
     @staticmethod

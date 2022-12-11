@@ -12,3 +12,4 @@ sftp-config*.json
 STTStereo.sublime-workspace
 *.pub
 *.log
+*.out

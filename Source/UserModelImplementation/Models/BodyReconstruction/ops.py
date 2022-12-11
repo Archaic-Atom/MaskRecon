@@ -172,9 +172,9 @@ def depth_to_normal(depth):
         depth_img = depth[i,:,:]
         dx=(-(depth_img[2:h,1:w-1]-depth_img[0:h-2,1:w-1])*0.5)
         dy=(-(depth_img[1:h-1,2:w]-depth_img[1:h-1,0:w-2])*0.5)
-        dz=torch.ones(( w-2,h-2)).cuda()
+        dz=torch.ones((h-2,w-2)).cuda()
         #dz=dz.to(device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-        dl =torch.sqrt(torch.mul(dx, dx) + torch.mul(dy,dy) + torch.mul(dz,dz))
+        dl =torch.sqrt(dx * dx + dy * dy + dz * dz)
         dx = torch.div(dx, dl) * 0.5 + 0.5
         dy = torch.div(dy, dl) * 0.5 + 0.5
         dz = torch.div(dz, dl) * 0.5 + 0.5

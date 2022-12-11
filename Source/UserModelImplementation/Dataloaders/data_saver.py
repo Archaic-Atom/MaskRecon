@@ -42,6 +42,8 @@ class DataSaver(object):
             temp_normal = normal_pre[i,:,:,:]
             #print(temp_depth.shape)
             name = batch_size * img_id + i
+             
+            #self._remove_outliers(temp_depth)
 
             self._save_output_depth(temp_depth, name)
             self._save_output_normal(temp_normal, name)
@@ -76,10 +78,11 @@ class DataSaver(object):
             temp_color_front = color_front[i,:,:,:]
             temp_depth_front = depth_front[i,:,:,:]
             temp_color_back = color_pre[i,:,:,:]
-            temp_depth_back = depth_pre[i,:,:,:]          
+            temp_depth_back = depth_pre[i,:,:,:]
+                  
             name = batch_size * img_id + i
-            print("name:", type(name))
             self._merge_output_mesh(temp_color_front, temp_depth_front, temp_color_back, temp_depth_back, name)
+            
 
     def _merge_output_mesh(self, color_f: np.array, 
                             depth_f: np.array, 
@@ -87,9 +90,10 @@ class DataSaver(object):
                             depth_b: np.array, 
                             num: int) -> None:
         args = self.__args
+        crop_w = args.imgWidth
+        crop_h = args.imgHeight
         #path = self._generate_output_mesh_path(args.resultImgDir, num, "%04d_mesh") 
         path = args.resultImgDir + "%04d_mesh" % num + ".ply"
-
         #color_f = color_f.transpose(1, 2, 0)
         #color_b = color_b.transpose(1, 2, 0)
         #depth_f = depth_f.transpose(1, 2, 0)
@@ -98,16 +102,45 @@ class DataSaver(object):
         color_b = color_b  * float(DataSaver._DEPTH_DIVIDING)
         depth_f = depth_f * float(DataSaver._DEPTH_UNIT)
         depth_b = depth_b * float(DataSaver._DEPTH_UNIT)
+        #depth_b = np.where(depth_b<DataSaver._DEPTH_UNIT * 0.99,depth_b,0)
 
-        #depth_b = cv2.flip(depth_b,1)
-        #color_b = cv2.flip(color_b,1)
+        
+        # buff data
+        #depth_f = depth_f * float(3.0)
+        #depth_b = depth_b + 1000
 
-        #depth_b = -depth_b + 1000
+        # real data
+        
 
-        _, crop_h, crop_w = depth_f.shape
-        #Y, X = torch.meshgrid(torch.tensor(range(crop_h)), torch.tensor(range(crop_w)))
-        #X = X.unsqueeze(0).unsqueeze(0).float()  # (B,H,W)
-        #Y = Y.unsqueeze(0).unsqueeze(0).float()
+        #zed data
+        #depth_f = depth_f * float(3.0) + 50
+        #depth_b = depth_b * float(1.5)+ 850 
+
+        # another real data
+        #depth_f = depth_f * float(10)
+        #depth_b = depth_b + 500
+
+        #tang dataset
+        #depth_f = depth_f * float(4.0)+ 150
+        #depth_b = depth_b *2  + 1200
+
+        # xu teacher
+        #depth_f = depth_f * float(1.5) +50
+        #depth_b = depth_b * float(1.8)
+
+        # stereopifu data
+        #depth_f = depth_f * float(3.0)
+        #depth_b = depth_b + 1000
+
+ 
+        #self._remove_outliers_1(depth_f)
+        self._remove_outliers_1(depth_b) 
+        self._remove_outliers_2(depth_b)
+        #self._remove_outliers_2(depth_f)
+
+
+        #_, crop_h, crop_w = depth_f.shape
+
         Y, X = np.meshgrid(np.arange(crop_h), np.arange(crop_w))
 
         x_cord = X * 2
@@ -121,21 +154,21 @@ class DataSaver(object):
                 fp_idx[hh, ww] = hh * crop_w + ww
                 bp_idx[hh, ww] += hh * crop_w + ww
         # convert the images to 3D mesh
-        print(x_cord.shape, y_cord.shape, depth_f.shape, color_f.shape)
         fpct = np.concatenate((x_cord, y_cord, depth_f, color_f), axis=0)
         bpct = np.concatenate((x_cord, y_cord, depth_b, color_b), axis=0)
-        print("fpct:", fpct.shape)
+        print("depth", depth_f.shape)
+        print("fpct",fpct.shape)
+        #print("fpct:", fpct.shape)
         # dilate for the edge point interpolation
         fpct = self._dilate(fpct, 1)
         bpct = self._dilate(bpct, 1)
-        print("fpct:", fpct.shape)
-        #fpc = fpct.permute(1, 2, 0)
-        #bpc = bpct.permute(1, 2, 0)
+        #print("fpct:", fpct.shape)
         fpc = np.transpose(fpct, [1, 2, 0])
         bpc = np.transpose(bpct, [1, 2, 0])
-        print("bpc:", fpc.shape)
-        self._remove_points(fpc)
-        self._remove_points(bpc)
+        print("fpc:", fpc.shape)
+        #self._remove_points(fpc)
+        #self._remove_points(bpc)
+         
         self._remove_points_1(fpc, bpc)
         
         # get the edge region for the edge point interpolation
@@ -146,10 +179,12 @@ class DataSaver(object):
         eroded = cv2.erode(mask_pc, kernel)
         edge = (mask_pc - eroded).astype(np.bool)
         # interpolate 2 points for each edge point pairs
-        fpc[edge, 2:6] = (fpc[edge, 2:6] * 2 + bpc[edge, 2:6] * 1) / 3
-        bpc[edge, 2:6] = (fpc[edge, 2:6] * 1 + bpc[edge, 2:6] * 2) / 3
+        fpc[edge, 2:6] = (fpc[edge, 2:6] * 4 + bpc[edge, 2:6] * 1) / 5
+        bpc[edge, 2:6] = (fpc[edge, 2:6] * 2 + bpc[edge, 2:6] * 3) / 5
+
         fpc = fpc.reshape(-1, 6)
         bpc = bpc.reshape(-1, 6)
+
         if (np.sum(mask_pc) < 100):
             print('noimage')
         fix_p = 1555
@@ -165,15 +200,117 @@ class DataSaver(object):
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
         self._ply_from_array_color(mesh.vertices, mesh.visual.vertex_colors, 
                                     mesh.faces, path)
+
+        #self._save_obj_mesh_with_color(path, mesh.vertices, mesh.faces, mesh.visual.vertex_colors)
+        #self._save_obj_mesh_without_color(path, mesh.vertices, mesh.faces)
         
+        '''
+        #处理噪声 加强背面颜色
+        self._meshcleaning(path)
+        out_mesh = trimesh.load(path).split()[0]
+        #print("out_mesh", out_mesh.shape)
+        color = out_mesh.visual.vertex_colors
+        verts = out_mesh.vertices
+        print(verts.shape)
+        #faces = out_mesh.faces
+        projection_matrix = np.identity(4)
+        projection_matrix[1, 1] = -1
+        calib_tensor = torch.Tensor(projection_matrix).unsqueeze(0).float()
+        #print(calib_tensor[:1].shape)
+        out_mesh.visual.vertex_colors = np.array(self._esti_color(np.array(color,dtype='uint16'), \
+            self._orthogonal(torch.from_numpy(verts.T).unsqueeze(0).float().cuda(), calib_tensor[:1])),dtype='uint8') #更新颜色
+        out_mesh.export(path)
+        '''
         
+    def _meshcleaning(self, obj_path):
+        '''
+        只留下最大的连通图 去噪音
+        '''
+        print(f"Processing mesh cleaning: {obj_path}")
+
+        mesh = trimesh.load(obj_path)
+        cc = mesh.split()    
+
+        out_mesh = cc[0]
+        bbox = out_mesh.bounds
+        height = bbox[1,0] - bbox[0,0]
+        #找高度最大的连通体，舍弃噪音
+        for c in cc:
+            bbox = c.bounds
+            if height < bbox[1,0] - bbox[0,0]:
+                height = bbox[1,0] - bbox[0,0]
+                out_mesh = c
+        
+        out_mesh.export(obj_path)  
+
+    def _orthogonal(self, points, calib, transform=None):
+        '''
+        使用正交投影将点投影到屏幕空间
+        args:
+            points: [B, 3, N] 3d points in world coordinates
+            calib: [B, 3, 4] projection matrix
+            transform: [B, 2, 3] screen space transformation
+        return:
+            [B, 3, N] 3d coordinates in screen space
+        '''
+        rot = calib[:, :3, :3]  #[B, 3, 3]
+        trans = calib[:, :3, 3:4]  #[B, 3, 1]
+        print(points.shape, calib.shape)
+        pts = torch.baddbmm(trans.cuda(), rot.cuda(), points.cuda()) #[B, 3, N]
+        if transform is not None:
+            scale = transform[:2, :2]
+            shift = transform[:2, 2:3]
+            pts[:, :2, :] = torch.baddbmm(shift, scale, pts[:, :2, :])
+        return pts
+
+    def _esti_color(self, color, xyz_tensor):
+        '''
+        重新渲染颜色，每一个z<0的点去找y最近的左右两个点的颜色
+        '''
+        xyz = xyz_tensor.cpu().numpy()[0].T
+        _ = list(range(xyz.shape[0]))
+        xyz_1 = [[*xyz[i].tolist(),_[i]] for i in range(xyz.shape[0]) if xyz[i][2]<0]
+        x_2 = np.array([[*xyz[i].tolist()[:2],_[i]] for i in range(xyz.shape[0]) if xyz[i][2]>=0 and xyz[i][2]<0.001])
+        
+        def find_closest(point,x_l):
+            x = point[0]
+            y = point[1]
+
+
+            try:
+                left = [int(i[2]) for i in sorted(x_l[x_l[:,0]-x<0], key=lambda x:(-abs(x[1]-y),x[0]),reverse=True)[:10]]
+            except:
+                left = [int(i[2]) for i in sorted(x_l[x_l[:,0]-x<0], key=lambda x:(-abs(x[1]-y),x[0]),reverse=True)]
+            try:
+                right = [int(i[2]) for i in sorted(x_l[x_l[:,0]-x>=0], key=lambda x:(abs(x[1]-y),x[0]))[:10]]
+            except:
+                right = [int(i[2]) for i in sorted(x_l[x_l[:,0]-x>=0], key=lambda x:(abs(x[1]-y),x[0]))]
+            left = None if len(left)==0 else left
+            right = None if len(right)==0 else right
+            return [left, right]
+        
+        for i in range(len(xyz_1)):
+            point = xyz_1[i]
+            left, right = find_closest(point, x_2)
+            #print(left, right)
+            if right != None and left != None:
+                temp_color = (sum(color[left])+sum(color[right]))/(len(left) + len(right))
+            elif right == None and left != None:
+                temp_color = sum(color[left])/len(left)
+            elif right != None and left == None:
+                temp_color = sum(color[right])/len(right)
+            else:
+                raise Exception('找不到最近颜色。')
+            color[point[-1]] = temp_color
+        return color
 
     def _save_output_depth(self, img: np.array, num: int) -> None:
         args = self.__args      
-        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_depth_front")        
+        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_depth_pre")        
         img =  img.transpose(1, 2, 0)
         img = (img * float(DataSaver._DEPTH_UNIT)).astype(np.uint16)
         img = np.where(img<DataSaver._DEPTH_UNIT,img,0)
+        
         #print("depth_img")
         #print(img.shape)
         cv2.imwrite(path, img)
@@ -181,7 +318,7 @@ class DataSaver(object):
 
     def _save_output_color(self, img: np.array, num: int) -> None:
         args = self.__args
-        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_color_front") 
+        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_color_pre") 
         #img = np.squeeze(img)
         img = img.transpose(1, 2, 0)
         #img = cv2.cvtColor(img.astype(np.uint8), cv2.COLOR_RGB2BGR)
@@ -192,7 +329,7 @@ class DataSaver(object):
 
     def _save_output_mesh(self, depth: np.array, color: np.array, num: int) -> None:
         args = self.__args
-        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_mesh_front") 
+        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_mesh_pre") 
         depth = np.squeeze(depth)
         depth = (depth * float(DataSaver._DEPTH_UNIT))
         self._remove_points(depth)
@@ -212,10 +349,54 @@ class DataSaver(object):
 
 
     def _remove_points(self, fp):
-        f0 = fp[:,:,2]>650
-        f1 = fp[:,:,2]<10
+        f0 = fp[:,:,2]>800
+        f1 = fp[:,:,2]<00
         fp[f0] = 0.0
         fp[f1] = 0.0
+
+    def _remove_outliers(self, data):
+        mask = data > 0
+        data0 = data[mask]
+        mean = data0.mean()
+        std = data0.std()       
+        llim = mean - 3 * std
+        ulim = mean + 3 * std
+        mask_ulim = data > ulim
+        mask_llim = data < llim
+        data[mask_ulim] = 0
+        data[mask_llim] = 0
+
+        print(mean, std, ulim, llim)
+
+    def _remove_outliers_2(self, data):
+        _, h, w = data.shape
+        data0 = data[0,:,:]
+        threshold = 30
+        for i in range(1,h-1):
+            for j in range(1,w-1):
+                if (data0[i,j] > 0):
+                    if (abs(data0[i,j]-data0[i-1,j])>threshold) and \
+                        (abs(data0[i,j]-data0[i+1,j])>threshold):
+                        data[:,i,j] = 0
+
+        
+    def _remove_outliers_1(self, data):
+        _, h, w = data.shape
+        data0 = data[0,:,:]
+        threshold = 20
+        for i in range(1,h-1):
+            for j in range(1,w-1):
+                if ((data0[i,j]>0) and (data0[i-1,j]>0) and (abs(data0[i,j]-data0[i-1,j])>threshold)) \
+                    or ((data0[i,j]>0) and (data0[i,j-1]>0) and (abs(data0[i,j]-data0[i,j-1])>threshold)):
+                    data[:,i,j] = 0
+        #dx = abs((data0[:, 2:h,1:w-1]-data0[:, 0:h-2,1:w-1]))
+        #dx_1 = abs((data0[:, 2:h,1:w-1]-data0[:, 0:h-2,1:w-1]))
+        #dy = abs((data0[:, 1:h-1,2:w]-data0[:, 1:h-1,0:w-2])) 
+        #threshold = 100
+        #data = np.where(dx < threshold, data, 0)  
+        #data = np.where(dy < threshold, data, 0)  
+        #data[dx>100] = 0
+        
 
     
     def _write_matrix_txt(self,a,filename):
@@ -226,7 +407,7 @@ class DataSaver(object):
 
     def _save_output_normal(self, img: np.array, num: int) -> None:
         args = self.__args
-        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_normal_front") 
+        path = self._generate_output_img_path(args.resultImgDir, num, "%04d_normal_pre") 
         normal=np.array(img*255)
         #np.savetxt("normal.txt",normal[0,:,:], fmt='%.8f')
         normal = cv2.cvtColor(np.transpose(normal, [1, 2, 0]), cv2.COLOR_BGR2RGB)         
@@ -330,6 +511,28 @@ class DataSaver(object):
             else:
                 all_boundary_faces_idx = np.vstack((all_boundary_faces_idx, boundary_faces_idx))
         return all_boundary_faces_idx
+
+    def _save_obj_mesh_with_color(self, mesh_path, verts, faces, colors):
+        file = open(mesh_path, 'w')
+
+        for idx, v in enumerate(verts):
+            c = colors[idx]
+            file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' % (v[0], v[1], v[2], c[0], c[1], c[2]))
+        for f in faces:
+            f_plus = f + 1
+            file.write('f %d %d %d\n' % (f_plus[0], f_plus[2], f_plus[1]))
+        file.close()   
+
+
+    def _save_obj_mesh_without_color(self, mesh_path, verts, faces):
+        file = open(mesh_path, 'w')
+
+        for idx, v in enumerate(verts):
+            file.write('v %.4f %.4f %.4f\n' % (v[0], v[1], v[2]))
+        for f in faces:
+            f_plus = f + 1
+            file.write('f %d %d %d\n' % (f_plus[0], f_plus[2], f_plus[1]))
+        file.close()  
 
     def _ply_from_array_color(self, points, colors, faces, output_file):
 
