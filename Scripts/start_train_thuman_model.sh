@@ -20,14 +20,14 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u ./Source/main.py\
                               --imgWidth 256 \
                               --imgHeight 256 \
                               --dataloaderNum 0 \
-                              --maxEpochs 10 \
+                              --maxEpochs 30 \
                               --imgNum 53520 \
                               --sampleNum 1 \
                               --log ${tensorboard_folder} \
                               --lr 0.001 \
                               --dist false \
                               --modelName BodyReconstruction \
-                              --modelDir ./Checkpoint_mask_size_2_ratio_0.05_loss_0.25_2/ \
+                              --modelDir ./Checkpoint/ \
                               --port ${dist_port} \
                               --mask true \
                               --dataset thuman2.0 > TrainRun.log 2>&1 &

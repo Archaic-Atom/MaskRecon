@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=3 python -u Source/main.py \
                         --dist False \
                         --modelName BodyReconstruction \
                         --outputDir ./DebugResult/ \
-                        --resultImgDir ./ResultImg11/\
+                        --resultImgDir ./ResultImg/\
                         --modelDir ./Checkpoint_mask_size_2_ratio_0.05_loss_0.25_2/ \
                         --dataset thuman2.0 \
                         --save_mesh False\

@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import torch
 # import torch.nn as nn
@@ -79,13 +80,13 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         else:
             sch_depth = None
        
-        opt_color_disc = optim.Adam(model[2].parameters(), lr=lr*0.0001)    
+        opt_color_disc = optim.Adam(model[2].parameters(), lr=lr*0.01)    
         if args.lr_scheduler:
             sch_color_disc = optim.lr_scheduler.LambdaLR(opt_color_disc, lr_lambda=self.lr_lambda)
         else:
             sch_color_disc = None
 
-        opt_depth_disc = optim.Adam(model[3].parameters(), lr=lr*0.0001)    
+        opt_depth_disc = optim.Adam(model[3].parameters(), lr=lr*0.01)    
         if args.lr_scheduler:
             sch_depth_disc = optim.lr_scheduler.LambdaLR(opt_depth_disc, lr_lambda=self.lr_lambda)
         else:
@@ -110,12 +111,10 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         args = self.__args
         '''
         if self.MODEL_GENERATOR_ID == model_id:
-
             fake_images = model(input_data[self.COLOR_ID], 
                                             input_data[self.DEPTH_ID], 
                                             input_data[self.UV_ID])
             normal_pre = ops.depth_to_normal(fake_images[1])
-
             if args.mode == "train":
                 assert self.output_G_color is None and self.output_G_depth is None
                 self.output_G_color = fake_images[0].detach()
@@ -139,7 +138,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                 assert self.output_G_color is None
                 self.output_G_color = fake_images[0].detach()
                 with torch.no_grad():
-                    fake_prob_color = self.disc_color(self.output_G_color)
+                    fake_prob_color = self.disc_color(self.output_G_color) 
                     if args.mask:
                         return [fake_images[0], fake_prob_color, fake_images[1]] 
                     return [fake_images[0], fake_prob_color] 
@@ -219,8 +218,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         #print(label_data[1].shape)
         #mask = np.expand_dims(color_gt.cpu(), axis=0)
         #print(mask.shape)
-        color_mask = label_data[0] >0
-        depth_mask = label_data[1] >0
+
         args = self.__args
         '''
         if self.MODEL_GENERATOR_ID == model_id:
@@ -238,8 +236,8 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         if self.MODEL_COLOR_ID == model_id:
             loss_color_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[1]), 
                                                                 torch.ones_like(output_data[1]).cuda())
-            loss_color = torch.mean(torch.abs(output_data[0][color_mask]-label_data[0][color_mask]))
-            loss_mask = torch.mean(torch.abs(output_data[2][color_mask]-label_data[2][color_mask]))
+            loss_color = torch.mean(torch.abs(output_data[0]-label_data[0]))
+            loss_mask = torch.mean(torch.abs(output_data[2]-label_data[2]))
             #loss_color = F.smooth_l1_loss(output_data[0][color_mask], label_data[0][color_mask])
             #loss_mask= F.smooth_l1_loss(output_data[2], label_data[2]) if args.mask else 0
             loss_total = 100 * loss_color + 0.25*loss_mask + loss_color_gan 
