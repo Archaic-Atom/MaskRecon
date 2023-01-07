@@ -42,7 +42,7 @@ class BodyReconstructionDataset(Dataset):
                                    hue=0.1)
         ])
 
-        self.mask_aug = MaskAug(args.imgHeight, args.imgWidth, block_size=2, ratio=0.05)
+        self.mask_aug = MaskAug(args.imgHeight, args.imgWidth, block_size=4, ratio=0.05)
 
         if is_training:
             self.__get_path = self._get_training_path

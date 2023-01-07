@@ -210,14 +210,13 @@ class UNet(nn.Module):
 
 
 class SUNet(nn.Module):
-    def __init__(self, in_channel, out_channel, ngf, upconv=False, norm=False, mask=False):
+    def __init__(self, in_channel=3, out_channel=1, ngf=32, upconv=False, norm=False):
         super(SUNet, self).__init__()
         self.in_channel = in_channel
         self.out_channel = out_channel
         self.ngf = ngf
         self.norm = norm
         self.upconv = upconv
-        self.mask = mask
 
         if self.norm:
             self.n0 = torch.nn.InstanceNorm2d(self.ngf * 2)
@@ -232,8 +231,7 @@ class SUNet(nn.Module):
             self.u2 = nn.ConvTranspose2d(self.ngf * 8, self.ngf * 8, 3, padding=1, output_padding=1, stride=2)
             self.u1 = nn.ConvTranspose2d(self.ngf * 4, self.ngf * 4, 3, padding=1, output_padding=1, stride=2)
             self.u0 = nn.ConvTranspose2d(self.ngf * 2, self.ngf * 2, 3, padding=1, output_padding=1, stride=2)
-        if self.mask:
-            self.recovery_size_x8_depth = RecoverySizeX8_depth()
+
         # size -> size / 2
         self.l0 = nn.Sequential(
             nn.Conv2d(self.in_channel, self.ngf, 3, padding=1, stride=1),
@@ -329,16 +327,15 @@ class SUNet(nn.Module):
 
         #for m in self.modules():
         #    ops.weights_init(m)
-
-    def forward(self, input_data, inter_mode='nearest'):
-        x0 = self.l0(input_data)
-        if self.norm:
-            x0 = self.n0(x0)
-        x1 = self.l1(x0)
-        if self.norm:
-            x1 = self.n1(x1)
+    
+    def forward(self, x1, inter_mode='nearest'):
+        #x0 = self.l0(input_data)
+        #if self.norm:
+        #    x0 = self.n0(x0)
+        #x1 = self.l1(x0)
+        #if self.norm:
+        #    x1 = self.n1(x1)
         x2 = self.l2(x1)
-        x22 = x2
         if self.norm:
             x2 = self.n2(x2)
         x3 = self.l3(x2)
@@ -353,7 +350,6 @@ class SUNet(nn.Module):
         x3u = self.l3u(torch.cat((x3u, x2), dim=1))
         if self.norm:
             x3u = self.n3u(x3u)
-
         if self.upconv:
             x2u = nn.functional.interpolate(self.u2(x3u), size=x1.shape[2:4], mode=inter_mode)
         else:
@@ -361,25 +357,20 @@ class SUNet(nn.Module):
         x2u = self.l2u(torch.cat((x2u, x1), dim=1))
         if self.norm:
             x2u = self.n2u(x2u)
-
         if self.upconv:
-            x1u = nn.functional.interpolate(self.u1(x2u), size=x0.shape[2:4], mode=inter_mode)
+            x1u = nn.functional.interpolate(self.u1(x2u), size=[x1.size()[2] * 2, x1.size()[3] * 2], mode=inter_mode)
         else:
-            x1u = nn.functional.interpolate(x2u, size=x0.shape[2:4], mode=inter_mode)
+            x1u = nn.functional.interpolate(x2u, size=[x1.size()[2] * 2, x1.size()[3] * 2], mode=inter_mode)
         x1u = self.l1u(x1u)
         if self.norm:
             x1u = self.n1u(x1u)
-
         if self.upconv:
-            x0u = nn.functional.interpolate(self.u0(x1u), size=input_data.shape[2:4], mode=inter_mode)
+            x0u = nn.functional.interpolate(self.u0(x1u), size=[x1.size()[2] * 4, x1.size()[3] * 4], mode=inter_mode)
         else:
-            x0u = nn.functional.interpolate(x1u, size=input_data.shape[2:4], mode=inter_mode)
+            x0u = nn.functional.interpolate(x1u, size=[x1.size()[2] * 4, x1.size()[3] * 4], mode=inter_mode)
         x0u = self.l0u(x0u)
-
-        if self.training and self.mask:
-            recovery_img_x8 = self.recovery_size_x8_depth(x22)
-            return x0u, recovery_img_x8
         return x0u
+
 
 def convbn(in_planes, out_planes, kernel_size, stride, pad, dilation):
 
@@ -420,7 +411,7 @@ class RecoverySizeX8(nn.Module):
         return x
 
 class RecoverySizeX4(nn.Module):
-    def __init__(self):
+    def __init__(self, out_channel=3):
         super().__init__()
         self.conv_0 = nn.Sequential(convbn(256, 64, 3, 1, 1, 1),
                                     nn.ReLU(inplace=True),
@@ -428,11 +419,11 @@ class RecoverySizeX4(nn.Module):
                                     nn.ReLU(inplace=True),
                                     convbn(64, 64, 3, 1, 1, 1),
                                     nn.ReLU(inplace=True))
-        self.conv_1 = nn.Sequential(convbn(64, 3, 3, 1, 1, 1),
+        self.conv_1 = nn.Sequential(convbn(64, out_channel, 3, 1, 1, 1),
                                     nn.ReLU(inplace=True),
-                                    convbn(3, 3, 3, 1, 1, 1),
+                                    convbn(out_channel, out_channel, 3, 1, 1, 1),
                                     nn.ReLU(inplace=True),
-                                    nn.Conv2d(3, 3, kernel_size=3, padding=1, stride=1, bias=False))
+                                    nn.Conv2d(out_channel, out_channel, kernel_size=3, padding=1, stride=1, bias=False))
 
     def forward(self, x):
         x = F.interpolate(x, [x.size()[2] * 2, x.size()[3] * 2], mode='bilinear', align_corners=True)
@@ -717,13 +708,18 @@ class FUNet(nn.Module):
         # xu = self.lxu(xu)
         return x0u
 
+def conv(in_planes, out_planes, kernel_size, stride, pad, dilation):
+
+    return nn.Sequential(nn.Conv2d(in_planes, out_planes,
+                                   kernel_size=kernel_size, stride=stride,
+                                   padding=dilation if dilation > 1 else pad, dilation = dilation, bias=False))
 
 class FeatureFusion(nn.Module):
-    def __init__(self):
+    def __init__(self, dim):
         super(FeatureFusion, self).__init__()
-        self.conv = nn.Sequential(convbn(256, 256, 3, 1, 1, 1),
-                                    convbn(256, 256, 3, 1, 1, 1))
-
+        self.dim = dim
+        self.conv = nn.Sequential(conv(self.dim, self.dim, 3, 1, 1, 1),
+                                    conv(self.dim, self.dim, 3, 1, 1, 1))
     def forward(self, x, y):
         y1 = self.conv(y)
         y2 = self.conv(y)

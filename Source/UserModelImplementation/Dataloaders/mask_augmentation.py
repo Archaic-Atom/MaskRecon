@@ -82,21 +82,31 @@ def debug_main():
         + (1 - mask[original_y:original_y + height, original_x:original_x + width]) * MaskAug.COLOR_GRAY
     cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/crop_0006_label.png', crop_img)
     '''
-    mask_aug = MaskAug(512, 512, block_size=8, ratio=0.4)
+    mask_aug = MaskAug(512, 512, block_size=2, ratio=0.2)
     left_img = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/0000_0_00.jpg'))
     print(left_img.shape)
     left_img_mask, mask = mask_aug(left_img)
     left_img_mask[:, :, 0] = left_img[:, :, 0] * mask + (1 - mask) * MaskAug.COLOR_GRAY
     left_img_mask[:, :, 1] = left_img[:, :, 1] * mask + (1 - mask) * MaskAug.COLOR_GRAY
     left_img_mask[:, :, 2] = left_img[:, :, 2] * mask + (1 - mask) * MaskAug.COLOR_GRAY
-    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/color_mask.png', left_img_mask)
-    #left_img = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/0000_0_00.jpg'))
+    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/color_mask_2_0.2.png', left_img_mask)
+    depth_img = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/depth_front.png'))
+    depth_img_mask = depth_img
+    depth_img_mask[:, :, 0] = depth_img[:, :, 0] * mask + (1 - mask) * MaskAug.COLOR_GRAY
+    depth_img_mask[:, :, 1] = depth_img[:, :, 1] * mask + (1 - mask) * MaskAug.COLOR_GRAY
+    depth_img_mask[:, :, 2] = depth_img[:, :, 2] * mask + (1 - mask) * MaskAug.COLOR_GRAY
+    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/depth_mask.png', depth_img_mask)
     original_x, original_y, height, width = 150, 300, 200, 200
     gt = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/0180_0_00.jpg'))
     gt[:, :, 0] = gt[:, :, 0] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
     gt[:, :, 1] = gt[:, :, 1] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
     gt[:, :, 2] = gt[:, :, 2] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
     cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/color_label.png', gt)
+    depth_gt = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/depth_back.png'))
+    depth_gt[:, :, 0] = depth_gt[:, :, 0] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
+    depth_gt[:, :, 1] = depth_gt[:, :, 1] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
+    depth_gt[:, :, 2] = depth_gt[:, :, 2] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
+    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/depth_label.png', depth_gt)
 
     #left_img = np.array(cv2.imread('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/0000_0_00.jpg'))
     #left_img[:, :, 0] = left_img[:, :, 0] * (1 - mask) + (mask) * MaskAug.COLOR_GRAY
@@ -115,6 +125,6 @@ def debug_main():
     crop_img[:, :, 2] = left_img[original_y:original_y + height, original_x:original_x + width, 2] \
         * mask[original_y:original_y + height, original_x:original_x + width] \
         + (1 - mask[original_y:original_y + height, original_x:original_x + width]) * MaskAug.COLOR_GRAY
-    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/crop_color_8_0.4.png', crop_img)
+    cv2.imwrite('/home/lixing/Programs/BodyReconstruction_Mask_2/Example/crop_color_2_0.2.png', crop_img)
 if __name__ == "__main__":
     debug_main()

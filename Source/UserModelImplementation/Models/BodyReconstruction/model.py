@@ -15,9 +15,9 @@ class ColorModel(nn.Module):
         self.dropout = 0
 
         self.color_extarction = BasicEncoder(input_dim=3, output_dim=256, norm_fn='instance', dropout=self.dropout)
-        self.recovery_net = RecoverySizeX4()
+        self.recovery_color = RecoverySizeX4(out_channel=3)
         self.condition_extraction = BasicEncoder(input_dim=4, output_dim=256, norm_fn='instance', dropout=self.dropout)
-        self.feature_fusion = FeatureFusion()
+        self.feature_fusion = FeatureFusion(dim=256)
         self.color_net = UNet(out_channel=3, ngf=ngf, upconv=False, norm=True)
         
     
@@ -30,10 +30,38 @@ class ColorModel(nn.Module):
         all_feature = self.feature_fusion(color_feature, condition_feature)
         color_front = self.color_net(all_feature)
         if self.training and self.mask:
-            recovery_color = self.recovery_net(color_feature)
+            recovery_color = self.recovery_color(color_feature)
             return [color_front, recovery_color]
         return color_front
 
+class DepthModel(nn.Module):
+    """docstring for ColorModel"""
+
+    def __init__(self, ngf: int, mask: bool) -> object:
+        super().__init__()
+        self.mask = mask
+        self.dropout = 0
+
+        self.depth_extarction = BasicEncoder(input_dim=1, output_dim=256, norm_fn='instance', dropout=self.dropout)
+        self.recovery_depth = RecoverySizeX4(out_channel=1)
+        self.condition_extraction = BasicEncoder(input_dim=6, output_dim=256, norm_fn='instance', dropout=self.dropout)
+        self.feature_fusion = FeatureFusion(dim=256)
+        self.depth_net = SUNet(out_channel=1, ngf=ngf, upconv=False, norm=True)
+        
+    
+    
+    def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
+        #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
+        #                         inter_mode='bilinear')
+        depth_feature = self.depth_extarction(depth_img)
+        condition_feature = self.condition_extraction(torch.cat((color_img, uv_img), dim=1))       
+        all_feature = self.feature_fusion(depth_feature, condition_feature)
+        depth_front = self.depth_net(all_feature)
+        if self.training and self.mask:
+            recovery_depth = self.recovery_depth(depth_feature)
+            return [depth_front, recovery_depth]
+        return depth_front
+'''
 class DepthModel(nn.Module):
     """docstring for DepthMode"""
 
@@ -53,6 +81,7 @@ class DepthModel(nn.Module):
         else:
             depth_front = self.depth_net(torch.cat((color_img, depth_img, uv_img), dim=1))
             return depth_front
+'''
 
 class GeneratorModel(nn.Module):
     """docstring for DepthMode"""

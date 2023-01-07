@@ -22,7 +22,7 @@ RAW_COLOR_TYPE = '.jpg'
 RAW_DEPTH_TYPE = '.png'
 
 # the output's path,
-TRAIN_LIST_PATH = './Datasets/thuman3_training_list_all.csv'
+TRAIN_LIST_PATH = './Datasets/thuman3_training_list_all_1.csv'
 
 
 # IMG_NUM = 194  # the dataset's total image
@@ -111,7 +111,7 @@ def produce_list(folder, file_list, fd_train_list):
                     (not depth_path_is_exists) and (not depth_lable_path_is_exists)\
                     and (not uv_path_is_exists):
                 break
-
+            
 
             data_str = color_path + ',' + depth_path + ',' + uv_path + ',' + color_lable_path + ',' + depth_lable_path 
             output_data(fd_train_list, data_str)

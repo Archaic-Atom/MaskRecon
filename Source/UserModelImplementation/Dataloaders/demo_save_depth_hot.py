@@ -5,7 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 def debug_main():
-
+        
     uint16_img -= uint16_img.min()
     uint16_img = uint16_img / (uint16_img.max() - uint16_img.min())
     uint16_img *= 255

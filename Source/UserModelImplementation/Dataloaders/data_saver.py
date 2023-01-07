@@ -93,7 +93,8 @@ class DataSaver(object):
         crop_w = args.imgWidth
         crop_h = args.imgHeight
         #path = self._generate_output_mesh_path(args.resultImgDir, num, "%04d_mesh") 
-        path = args.resultImgDir + "%04d_mesh" % num + ".ply"
+        path_obj = args.resultImgDir + "%04d_mesh" % num + ".obj"
+        path_ply = args.resultImgDir + "%04d_mesh" % num + ".ply"
         #color_f = color_f.transpose(1, 2, 0)
         #color_b = color_b.transpose(1, 2, 0)
         #depth_f = depth_f.transpose(1, 2, 0)
@@ -104,7 +105,7 @@ class DataSaver(object):
         depth_b = depth_b * float(DataSaver._DEPTH_UNIT)
         #depth_b = np.where(depth_b<DataSaver._DEPTH_UNIT * 0.99,depth_b,0)
 
-        
+
         # buff data
         #depth_f = depth_f * float(3.0)
         #depth_b = depth_b + 1000
@@ -128,14 +129,10 @@ class DataSaver(object):
         #depth_f = depth_f * float(1.5) +50
         #depth_b = depth_b * float(1.8)
 
-        # stereopifu data
-        #depth_f = depth_f * float(3.0)
-        #depth_b = depth_b + 1000
-
  
         #self._remove_outliers_1(depth_f)
-        self._remove_outliers_1(depth_b) 
-        self._remove_outliers_2(depth_b)
+        #self._remove_outliers_1(depth_b) 
+        #self._remove_outliers_2(depth_b)
         #self._remove_outliers_2(depth_f)
 
 
@@ -156,8 +153,6 @@ class DataSaver(object):
         # convert the images to 3D mesh
         fpct = np.concatenate((x_cord, y_cord, depth_f, color_f), axis=0)
         bpct = np.concatenate((x_cord, y_cord, depth_b, color_b), axis=0)
-        print("depth", depth_f.shape)
-        print("fpct",fpct.shape)
         #print("fpct:", fpct.shape)
         # dilate for the edge point interpolation
         fpct = self._dilate(fpct, 1)
@@ -165,9 +160,10 @@ class DataSaver(object):
         #print("fpct:", fpct.shape)
         fpc = np.transpose(fpct, [1, 2, 0])
         bpc = np.transpose(bpct, [1, 2, 0])
-        print("fpc:", fpc.shape)
+        #print("bpc:", fpc.shape)
         #self._remove_points(fpc)
-        #self._remove_points(bpc)
+        self._remove_points(bpc)
+        self._remove_outliers(bpc)
          
         self._remove_points_1(fpc, bpc)
         
@@ -181,10 +177,8 @@ class DataSaver(object):
         # interpolate 2 points for each edge point pairs
         fpc[edge, 2:6] = (fpc[edge, 2:6] * 4 + bpc[edge, 2:6] * 1) / 5
         bpc[edge, 2:6] = (fpc[edge, 2:6] * 2 + bpc[edge, 2:6] * 3) / 5
-
         fpc = fpc.reshape(-1, 6)
         bpc = bpc.reshape(-1, 6)
-
         if (np.sum(mask_pc) < 100):
             print('noimage')
         fix_p = 1555
@@ -199,10 +193,10 @@ class DataSaver(object):
         colors = points[:, 3:6].astype(np.uint8)
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
         self._ply_from_array_color(mesh.vertices, mesh.visual.vertex_colors, 
-                                    mesh.faces, path)
+                                    mesh.faces, path_ply)
 
         #self._save_obj_mesh_with_color(path, mesh.vertices, mesh.faces, mesh.visual.vertex_colors)
-        #self._save_obj_mesh_without_color(path, mesh.vertices, mesh.faces)
+        self._save_obj_mesh_without_color(path_obj, mesh.vertices, mesh.faces)
         
         '''
         #处理噪声 加强背面颜色
@@ -350,23 +344,28 @@ class DataSaver(object):
 
     def _remove_points(self, fp):
         f0 = fp[:,:,2]>800
-        f1 = fp[:,:,2]<00
+        f1 = fp[:,:,2]<50
         fp[f0] = 0.0
         fp[f1] = 0.0
+        return fp
+
 
     def _remove_outliers(self, data):
-        mask = data > 0
+        mask = data[:,:,2]>0
         data0 = data[mask]
-        mean = data0.mean()
-        std = data0.std()       
-        llim = mean - 3 * std
-        ulim = mean + 3 * std
-        mask_ulim = data > ulim
-        mask_llim = data < llim
+        mean = np.mean(data0[:,2])
+        std = np.std(data0[:,2])
+        max = np.max(data0[:,2])
+        min = np.min(data0[:,2])      
+        llim = 100
+        ulim = mean + 3*std
+        mask_ulim = data[:,:,2] > ulim
+        #mask_llim = data < llim
         data[mask_ulim] = 0
-        data[mask_llim] = 0
+        #data[mask_llim] = 0
 
-        print(mean, std, ulim, llim)
+        print(mean, std, max, min, ulim, llim)
+        return data
 
     def _remove_outliers_2(self, data):
         _, h, w = data.shape

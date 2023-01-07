@@ -16,12 +16,12 @@ echo "Begin to train the model!"
 CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u ./Source/main.py\
                               --mode train --batchSize 16 \
                               --gpu 4 \
-                              --trainListPath ./Datasets/thuman2_3_training_list_all.csv \
+                              --trainListPath ./Datasets/thuman2_3_training_list.csv \
                               --imgWidth 256 \
                               --imgHeight 256 \
                               --dataloaderNum 0 \
                               --maxEpochs 30 \
-                              --imgNum 53520 \
+                              --imgNum 51360 \
                               --sampleNum 1 \
                               --log ${tensorboard_folder} \
                               --lr 0.001 \

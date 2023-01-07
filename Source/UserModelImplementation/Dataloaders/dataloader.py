@@ -84,7 +84,7 @@ class BodyDataloader(jf.UserTemplate.DataHandlerTemplate):
                                     img_id, args.dataset, supplement)
             self.depth_back = output_data[0].detach().cpu().numpy()
             self.depth_front = output_data[2].detach().cpu().numpy()
-            print("self.depth_back", self.depth_back.shape)
+            #print("self.depth_back", self.depth_back.shape)
             if args.save_mesh == True:
                 self.__saver.save_output_mesh_2(self.color_back, 
                                             self.depth_back, 

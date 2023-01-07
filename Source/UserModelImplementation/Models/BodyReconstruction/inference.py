@@ -60,7 +60,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         # return model
         ngf = 64
         self.model_color = ColorModel(ngf=ngf, mask=args.mask)
-        self.model_depth = DepthModel(in_channel=7, ngf=ngf, mask=args.mask)
+        self.model_depth = DepthModel(ngf=ngf, mask=args.mask)
         #self.generator = GeneratorModel(in_channel=7, ngf=ngf, mask=args.mask)
         self.disc_color = NLayerDiscriminator(input_nc=3, ndf=32, n_layers=3)
         self.disc_depth = NLayerDiscriminator(input_nc=1, ndf=32, n_layers=3)
@@ -237,23 +237,24 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
             loss_color_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[1]), 
                                                                 torch.ones_like(output_data[1]).cuda())
             loss_color = torch.mean(torch.abs(output_data[0]-label_data[0]))
-            loss_mask = torch.mean(torch.abs(output_data[2]-label_data[2]))
+            loss_mask = torch.mean(torch.abs(output_data[2]-label_data[2])) if args.mask else 0
             #loss_color = F.smooth_l1_loss(output_data[0][color_mask], label_data[0][color_mask])
             #loss_mask= F.smooth_l1_loss(output_data[2], label_data[2]) if args.mask else 0
-            loss_total = 100 * loss_color + 0.25*loss_mask + loss_color_gan 
-            return [loss_total, loss_color]
+            loss_total = 15 * loss_color + 0.25*loss_mask + loss_color_gan 
+            return [loss_total, loss_color, loss_mask]
         if self.MODEL_DEPTH_ID == model_id:
-            #loss_depth = torch.mean(torch.abs(output_data[0]-label_data[1]))
-            loss_depth = F.smooth_l1_loss(output_data[0], label_data[1])
+            loss_depth = torch.mean(torch.abs(output_data[0]-label_data[1]))
+            #loss_depth = F.smooth_l1_loss(output_data[0], label_data[1])
             loss_depth_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[2]), 
                                                                 torch.ones_like(output_data[2]).cuda())
             normal_gt = ops.depth_to_normal(label_data[1])
-            loss_normal = F.smooth_l1_loss(output_data[1], normal_gt)
-            #loss_normal = torch.mean(torch.abs(output_data[1]-normal_gt))
+            #loss_normal = F.smooth_l1_loss(output_data[1], normal_gt)
+            loss_normal = torch.mean(torch.abs(output_data[1]-normal_gt))
             #total loss
-            loss_mask= F.smooth_l1_loss(output_data[3], label_data[3]) if args.mask else 0
-            total_depth_loss = 100*(loss_depth + loss_normal) + 0.5*loss_mask + loss_depth_gan
-            return [total_depth_loss, loss_depth]
+            loss_mask = torch.mean(torch.abs(output_data[3]-label_data[3])) if args.mask else 0
+            #loss_mask= F.smooth_l1_loss(output_data[3], label_data[3]) if args.mask else 0
+            total_depth_loss = 10*(loss_depth + loss_normal) + 0.5*loss_mask + loss_depth_gan
+            return [total_depth_loss, loss_depth, loss_mask]
         if self.MODEL_COLOR_DISC_ID == model_id:
             #b, _, h, w = output_data[0].shape
             #print(output_data[0].shape)
