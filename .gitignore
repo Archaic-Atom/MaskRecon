@@ -1,4 +1,5 @@
 ResultImg/
+RealImg/
 *previous*/
 Submission/
 *Checkpoint*/
@@ -13,3 +14,4 @@ STTStereo.sublime-workspace
 *.pub
 *.log
 *.out
+*.zip

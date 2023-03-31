@@ -122,8 +122,16 @@ class DataSaver(object):
         #depth_b = depth_b + 500
 
         #tang dataset
-        #depth_f = depth_f * float(4.0)+ 150
-        #depth_b = depth_b *2  + 1200
+        #depth_f = depth_f * float(4.0)
+        #depth_b = np.where(depth_b>0,depth_b *float(2.0)  + 1150, 0)
+
+        # normalgan dataset
+        #depth_f= depth_f*2
+        # for image 0
+        #depth_b = depth_b+490
+        #for image 1 and 2
+        #depth_b = depth_b/1.5 + 500
+
 
         # xu teacher
         #depth_f = depth_f * float(1.5) +50
@@ -131,8 +139,8 @@ class DataSaver(object):
 
  
         #self._remove_outliers_1(depth_f)
-        #self._remove_outliers_1(depth_b) 
-        #self._remove_outliers_2(depth_b)
+        self._remove_outliers_1(depth_b) 
+        self._remove_outliers_2(depth_b)
         #self._remove_outliers_2(depth_f)
 
 
@@ -155,13 +163,14 @@ class DataSaver(object):
         bpct = np.concatenate((x_cord, y_cord, depth_b, color_b), axis=0)
         #print("fpct:", fpct.shape)
         # dilate for the edge point interpolation
-        fpct = self._dilate(fpct, 1)
-        bpct = self._dilate(bpct, 1)
+        #fpct = self._dilate(fpct, 1)
+        #bpct = self._dilate(bpct, 1)
+        #fpct = self._erode(fpct, 1)
+        #bpct = self._erode(bpct, 1)
         #print("fpct:", fpct.shape)
         fpc = np.transpose(fpct, [1, 2, 0])
         bpc = np.transpose(bpct, [1, 2, 0])
-        #print("bpc:", fpc.shape)
-        #self._remove_points(fpc)
+
         self._remove_points(bpc)
         self._remove_outliers(bpc)
          
@@ -188,14 +197,19 @@ class DataSaver(object):
         faces = np.vstack((f_faces, b_faces, edge_faces))
         points = np.concatenate((fpc, bpc), axis=0)
         points[:, 0:3] = -(points[:, 0:3] - np.array([[crop_w / 2 , (crop_h - 5)  - 700, fix_p]])) / 1000.0
-        points[:, 0] = -points[:, 0]
+        #points[:, 0] = -points[:, 0]
         vertices = points[:, 0:3]
         colors = points[:, 3:6].astype(np.uint8)
+        
+        #colors = points[:, 3:6].astype(int)
+        
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
         self._ply_from_array_color(mesh.vertices, mesh.visual.vertex_colors, 
                                     mesh.faces, path_ply)
-
-        #self._save_obj_mesh_with_color(path, mesh.vertices, mesh.faces, mesh.visual.vertex_colors)
+        #self._save_obj_mesh_with_color(path_obj, mesh.vertices, mesh.faces, mesh.visual.vertex_colors)
+        points[:, 0] = -points[:, 0]
+        vertices = points[:, 0:3]
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
         self._save_obj_mesh_without_color(path_obj, mesh.vertices, mesh.faces)
         
         '''
@@ -364,7 +378,7 @@ class DataSaver(object):
         data[mask_ulim] = 0
         #data[mask_llim] = 0
 
-        print(mean, std, max, min, ulim, llim)
+        #print(mean, std, max, min, ulim, llim)
         return data
 
     def _remove_outliers_2(self, data):
@@ -377,6 +391,12 @@ class DataSaver(object):
                     if (abs(data0[i,j]-data0[i-1,j])>threshold) and \
                         (abs(data0[i,j]-data0[i+1,j])>threshold):
                         data[:,i,j] = 0
+                        #if (data0[i-1,j]>0 and data0[i+1,j]>0):
+                        #    data[:,i,j] = (data0[i-1,j] + data0[i+1,j])/2.0
+                        #else:
+                        #    data[:,i,j] = (data0[i-1,j] + data0[i+1,j])
+
+                        
 
         
     def _remove_outliers_1(self, data):
@@ -471,6 +491,21 @@ class DataSaver(object):
             depth = newdepth
         return newdepth
 
+    def _erode(self, depth, pix):
+        # depth: [B, C, H, W]
+        newdepth = np.array(depth)
+        for i in range(pix):
+            d1 = depth[:, 1:, :]
+            d2 = depth[:, :-1, :]
+            d3 = depth[:, :, 1:]
+            d4 = depth[:, :, :-1]
+            newdepth[:, :-1, :] = np.where(newdepth[:, :-1, :] > 0, d1, newdepth[:, :-1, :])
+            newdepth[:, 1:, :] = np.where(newdepth[:, 1:, :] > 0, d2, newdepth[:, 1:, :])
+            newdepth[:, :, :-1] = np.where(newdepth[:, :, :-1] > 0, d3, newdepth[:, :, :-1])
+            newdepth[:, :, 1:] = np.where(newdepth[:, :, 1:] > 0, d4, newdepth[:, :, 1:])
+            depth = newdepth
+        return newdepth
+
     def _getfrontFaces(self, mask, p_idx):
         p_valid_idx = p_idx * mask
         p00_idx = p_valid_idx[:-1, :-1].reshape(-1, 1)
@@ -516,7 +551,7 @@ class DataSaver(object):
 
         for idx, v in enumerate(verts):
             c = colors[idx]
-            file.write('v %.4f %.4f %.4f %.4f %.4f %.4f\n' % (v[0], v[1], v[2], c[0], c[1], c[2]))
+            file.write('v %.4f %.4f %.4f %d %d %d\n' % (v[0], v[1], v[2], c[0], c[1], c[2]))
         for f in faces:
             f_plus = f + 1
             file.write('f %d %d %d\n' % (f_plus[0], f_plus[2], f_plus[1]))
@@ -556,7 +591,7 @@ class DataSaver(object):
             index = 0
             for item in points:
                 f.write("{0:0.6f} {1:0.6f} {2:0.6f} {3} {4} {5}\n".format(item[0], item[1], item[2],
-                                                            colors[index, 0], colors[index, 1], colors[index, 2]))
+                                                        colors[index, 0], colors[index, 1], colors[index, 2]))
                 index = index + 1
 
             for item in faces:

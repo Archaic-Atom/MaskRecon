@@ -36,7 +36,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         self.__CrossEntropy = nn.CrossEntropyLoss()
         self.__mse = nn.MSELoss()
         self.output_G_color = None
-        self.output_G_depth = None
+        self.output_G_normal = None
         self.model_color = None
         self.model_depth = None
         self.disc_color = None
@@ -63,7 +63,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         self.model_depth = DepthModel(ngf=ngf, mask=args.mask)
         #self.generator = GeneratorModel(in_channel=7, ngf=ngf, mask=args.mask)
         self.disc_color = NLayerDiscriminator(input_nc=3, ndf=32, n_layers=3)
-        self.disc_depth = NLayerDiscriminator(input_nc=1, ndf=32, n_layers=3)
+        self.disc_depth = NLayerDiscriminator(input_nc=3, ndf=32, n_layers=3)
         return [self.model_color, self.model_depth, self.disc_color, self.disc_depth]
 
     def optimizer(self, model: list, lr: float) -> list:
@@ -80,13 +80,13 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         else:
             sch_depth = None
        
-        opt_color_disc = optim.Adam(model[2].parameters(), lr=lr*0.01)    
+        opt_color_disc = optim.Adam(model[2].parameters(), lr=0.00001*lr)    
         if args.lr_scheduler:
             sch_color_disc = optim.lr_scheduler.LambdaLR(opt_color_disc, lr_lambda=self.lr_lambda)
         else:
             sch_color_disc = None
 
-        opt_depth_disc = optim.Adam(model[3].parameters(), lr=lr*0.01)    
+        opt_depth_disc = optim.Adam(model[3].parameters(), lr=0.00001*lr)    
         if args.lr_scheduler:
             sch_depth_disc = optim.lr_scheduler.LambdaLR(opt_depth_disc, lr_lambda=self.lr_lambda)
         else:
@@ -140,13 +140,15 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                 with torch.no_grad():
                     fake_prob_color = self.disc_color(self.output_G_color) 
                     if args.mask:
+                        #print(fake_images[0].shape, fake_prob_color.shape)
                         return [fake_images[0], fake_prob_color, fake_images[1]] 
+                        
                     return [fake_images[0], fake_prob_color] 
             else:
                 fake_images = model(input_data[self.COLOR_ID], 
                                             input_data[self.DEPTH_ID], 
                                             input_data[self.UV_ID])
-                return [fake_images, input_data[self.COLOR_ID]]
+                return [fake_images[0], input_data[self.COLOR_ID]]
 
         if self.MODEL_DEPTH_ID == model_id:
             if args.mode == "train":
@@ -154,10 +156,10 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                                             input_data[self.DEPTH_ID], 
                                             input_data[self.UV_ID])
                 normal_pre = ops.depth_to_normal(fake_images[0])
-                assert self.output_G_depth is None
-                self.output_G_depth = fake_images[0].detach()
+                assert self.output_G_normal is None
+                self.output_G_normal = normal_pre.detach().cuda()
                 with torch.no_grad():
-                    fake_prob = self.disc_depth(self.output_G_depth)
+                    fake_prob = self.disc_depth(self.output_G_normal)
                      
                     if args.mask:
                         return [fake_images[0], normal_pre, fake_prob, fake_images[1]]
@@ -166,8 +168,8 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                 depth_front = model(input_data[self.COLOR_ID], 
                                             input_data[self.DEPTH_ID], 
                                             input_data[self.UV_ID])
-                normal_pre = ops.depth_to_normal(depth_front)
-                return [depth_front, normal_pre, input_data[self.DEPTH_ID]]
+                normal_pre = ops.depth_to_normal(depth_front[0])
+                return [depth_front[0], normal_pre, input_data[self.DEPTH_ID]]
         
         if args.mode == "train":
             if self.MODEL_COLOR_DISC_ID == model_id:
@@ -179,10 +181,11 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
 
         if args.mode == "train":
             if self.MODEL_DEPTH_DISC_ID == model_id:
-                assert self.output_G_depth is not None
-                disc_depth_fack = model(self.output_G_depth)
-                disc_depth_true = model(input_data[4])
-                self.output_G_depth = None
+                assert self.output_G_normal is not None
+                disc_depth_fack = model(self.output_G_normal)               
+                normal_gt = ops.depth_to_normal(input_data[4])
+                disc_depth_true = model(normal_gt.detach())
+                self.output_G_normal = None
                 return [disc_depth_fack, disc_depth_true]
 
 
@@ -238,23 +241,22 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                                                                 torch.ones_like(output_data[1]).cuda())
             loss_color = torch.mean(torch.abs(output_data[0]-label_data[0]))
             loss_mask = torch.mean(torch.abs(output_data[2]-label_data[2])) if args.mask else 0
-            #loss_color = F.smooth_l1_loss(output_data[0][color_mask], label_data[0][color_mask])
-            #loss_mask= F.smooth_l1_loss(output_data[2], label_data[2]) if args.mask else 0
             loss_total = 15 * loss_color + 0.25*loss_mask + loss_color_gan 
-            return [loss_total, loss_color, loss_mask]
+            return [loss_total, loss_color]
         if self.MODEL_DEPTH_ID == model_id:
             loss_depth = torch.mean(torch.abs(output_data[0]-label_data[1]))
-            #loss_depth = F.smooth_l1_loss(output_data[0], label_data[1])
-            loss_depth_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[2]), 
+            
+            loss_normal_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[2]), 
                                                                 torch.ones_like(output_data[2]).cuda())
+            #loss_depth_gan = nn.functional.binary_cross_entropy(torch.sigmoid(output_data[1]), 
+            #                                                    torch.ones_like(output_data[1]).cuda())
             normal_gt = ops.depth_to_normal(label_data[1])
-            #loss_normal = F.smooth_l1_loss(output_data[1], normal_gt)
             loss_normal = torch.mean(torch.abs(output_data[1]-normal_gt))
             #total loss
             loss_mask = torch.mean(torch.abs(output_data[3]-label_data[3])) if args.mask else 0
-            #loss_mask= F.smooth_l1_loss(output_data[3], label_data[3]) if args.mask else 0
-            total_depth_loss = 10*(loss_depth + loss_normal) + 0.5*loss_mask + loss_depth_gan
-            return [total_depth_loss, loss_depth, loss_mask]
+            total_depth_loss = 10*(loss_depth + loss_normal) + 0.5*loss_mask + loss_normal_gan
+            #total_depth_loss = 20*loss_depth + loss_normal + 0.5*loss_mask + loss_depth_gan
+            return [total_depth_loss, loss_depth]
         if self.MODEL_COLOR_DISC_ID == model_id:
             #b, _, h, w = output_data[0].shape
             #print(output_data[0].shape)

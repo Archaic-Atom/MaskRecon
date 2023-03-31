@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchvision import transforms
 
 # Ref: https://github.com/princeton-vl/RAFT/blob/master/core/extractor.py
 class ResidualBlock(nn.Module):
@@ -96,7 +97,7 @@ class BasicEncoder(nn.Module):
         self.in_planes = dim
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, name):
 
         # if input is list, combine batch dimension
         is_list = isinstance(x, tuple) or isinstance(x, list)
@@ -107,10 +108,18 @@ class BasicEncoder(nn.Module):
         x = self.conv1(x)
         x = self.norm1(x)
         x = self.relu1(x)
+        
+        
         x = self.layer1(x)
         x = self.layer2(x)
+        
         x = self.layer3(x)
         x = self.conv2(x)
+        
+        #print feature
+        #toPIL = transforms.ToPILImage()
+        #pic = toPIL(x[0,0,:,:])
+        #pic.save(name + '_03.jpg')
 
 
         if self.dropout is not None:

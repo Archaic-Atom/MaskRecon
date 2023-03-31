@@ -7,27 +7,25 @@ evalution_format='training'
 
 echo "test gpus id: "${test_gpus_id}
 echo "the list path is: "${test_list_path}
-echo "start to predict depth map"
-CUDA_VISIBLE_DEVICES=3 python -u Source/main.py \
+echo "start to predict disparity map"
+CUDA_VISIBLE_DEVICES=0 python -u Source/main.py \
                         --mode test \
                         --batchSize 1 \
                         --gpu 1 \
-                        --trainListPath ./Datasets/thuman2_3_training_list_debug.csv \
-                        --imgWidth 512 \
-                        --imgHeight 512 \
+                        --trainListPath ./Datasets/tang_testing_list.csv \
+                        --imgWidth 480 \
+                        --imgHeight 480 \
                         --dataloaderNum 0 \
                         --maxEpochs 45 \
-                        --imgNum 168 \
+                        --imgNum 2 \
                         --sampleNum 1 \
                         --lr 0.001 \
                         --log ./TestLog/ \
                         --dist False \
                         --modelName BodyReconstruction \
                         --outputDir ./DebugResult/ \
-                        --resultImgDir ./ResultImg_debug/\
-                        --modelDir ./Checkpoint_best/ \
+                        --resultImgDir ./ResultImg_tang/\
+                        --modelDir ./Checkpoint/ \
                         --dataset thuman2.0 \
-                        --save_mesh True\
-
-
+                        --save_mesh True
 echo "Finish!"

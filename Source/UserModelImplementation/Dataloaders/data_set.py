@@ -42,7 +42,7 @@ class BodyReconstructionDataset(Dataset):
                                    hue=0.1)
         ])
 
-        self.mask_aug = MaskAug(args.imgHeight, args.imgWidth, block_size=4, ratio=0.05)
+        self.mask_aug = MaskAug(args.imgHeight, args.imgWidth, block_size=2, ratio=0.15)
 
         if is_training:
             self.__get_path = self._get_training_path
@@ -175,9 +175,9 @@ class BodyReconstructionDataset(Dataset):
 
         if args.mask:
             color_img_mask, mask = self.mask_aug(color_img)
-            color_gt[:, :, 0] = color_gt[:, :, 0] * mask
-            color_gt[:, :, 1] = color_gt[:, :, 1] * mask
-            color_gt[:, :, 2] = color_gt[:, :, 2] * mask
+            #color_gt[:, :, 0] = color_gt[:, :, 0] * mask
+            #color_gt[:, :, 1] = color_gt[:, :, 1] * mask
+            #color_gt[:, :, 2] = color_gt[:, :, 2] * mask
         else:
             color_img_mask = color_img
         
@@ -193,8 +193,10 @@ class BodyReconstructionDataset(Dataset):
         depth_gt[np.isinf(depth_gt)] = 0
 
         if args.mask:
+            #return color_img_mask, depth_img.astype('float32') * mask.astype('float32'), \
+            #    uv_img, color_gt, depth_gt.astype('float32') * mask.astype('float32'), color_img, depth_img
             return color_img_mask, depth_img.astype('float32') * mask.astype('float32'), \
-                uv_img, color_gt, depth_gt.astype('float32') * mask.astype('float32'), color_img, depth_img
+                uv_img, color_gt, depth_gt, color_img, depth_img
         else:
             return color_img, depth_img, uv_img, color_gt, depth_gt, color_img, depth_img
 
@@ -218,7 +220,8 @@ class BodyReconstructionDataset(Dataset):
         crop_w = args.imgWidth
         crop_h = args.imgHeight
 
-        color_img = jf.ImgIO.read_img(color_img_path)
+        #color_img = jf.ImgIO.read_img(color_img_path)
+        color_img = np.array(Image.open(color_img_path).convert('RGB'), np.float32)
         depth_img = self._read_png_depth(depth_img_path)
         uv_img = np.array(imageio.imread(uv_img_path), np.float32)
         
@@ -226,12 +229,15 @@ class BodyReconstructionDataset(Dataset):
         uv_img = np.flip(uv_img, 1).copy()
         depth_img = np.flip(depth_img, 1).copy()
 
+
+       
         #uv_img=cv2.resize(uv_img, (512, 512), interpolation=cv2.INTER_AREA)
         #color_img=cv2.resize(color_img, (512, 512), interpolation=cv2.INTER_AREA)
         #depth_img=cv2.resize(depth_img, (512, 512), interpolation=cv2.INTER_AREA)
         #depth_img = np.expand_dims(depth_img, axis=2)
         
-
+        # normalgan dataset
+        #depth_img=depth_img/float(4)
 
         # buff data
         #depth_img = depth_img / float(60)
@@ -255,10 +261,12 @@ class BodyReconstructionDataset(Dataset):
         #depth_temp = np.concatenate((depth_img, depth_img, depth_img), axis=2)
         #color_img = np.where(depth_temp==0, 0, color_img)
 
-        #mask = color_img >0.01
-        #mask = mask[:,:,0]
-        #mask = np.expand_dims(mask, axis=2)
-        #depth_img = depth_img * mask
+        mask = color_img >0.01
+        mask = mask[:,:,0]
+        mask = np.expand_dims(mask, axis=2)
+        depth_img = depth_img * mask
+
+
         #cv2.imwrite('./depth.png', depth_img.astype(np.uint16))
 
 

@@ -25,7 +25,7 @@ CUDA_VISIBLE_DEVICES=0 python -u Source/main.py \
                         --modelName BodyReconstruction \
                         --outputDir ./DebugResult/ \
                         --resultImgDir ./RealImg/\
-                        --modelDir ./Checkpoint_3/ \
+                        --modelDir ./Checkpoint/ \
                         --dataset thuman2.0 \
                         --save_mesh True
 echo "Finish!"
