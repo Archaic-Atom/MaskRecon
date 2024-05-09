@@ -146,9 +146,10 @@ class BodyReconstructionDataset(Dataset):
         uv_img = np.array(uv_img, np.float32)
         color_gt = np.array(color_gt, np.float32)
         depth_gt = np.array(depth_gt, np.float32)
-
+        print("depth shape:", depth_img.shape)
         depth_img = np.expand_dims(depth_img, axis=2)
         depth_gt = np.expand_dims(depth_gt, axis=2)
+        print("depth shape final:", depth_img.shape)
 
         
 
@@ -225,10 +226,12 @@ class BodyReconstructionDataset(Dataset):
         depth_img = self._read_png_depth(depth_img_path)
         uv_img = np.array(imageio.imread(uv_img_path), np.float32)
         
+        if depth_img.shape[2] == 4:
+            depth_img = depth_img[:,:,0]
+            depth_img = np.expand_dims(depth_img, axis=2)
         color_img = np.flip(color_img, 1).copy()
         uv_img = np.flip(uv_img, 1).copy()
         depth_img = np.flip(depth_img, 1).copy()
-
 
        
         #uv_img=cv2.resize(uv_img, (512, 512), interpolation=cv2.INTER_AREA)

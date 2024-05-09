@@ -13,10 +13,10 @@ if [ -d "${tensorboard_folder}" ]; then
 fi
 
 echo "Begin to train the model!"
-CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u ./Source/main.py\
-                              --mode train --batchSize 16 \
-                              --gpu 4 \
-                              --trainListPath ./Datasets/thuman2_3_training_list.csv \
+CUDA_VISIBLE_DEVICES=0,1 nohup python -u ./Source/main.py\
+                              --mode train --batchSize 8 \
+                              --gpu 2 \
+                              --trainListPath ./Datasets/renderpeople_testing_list.csv \
                               --imgWidth 256 \
                               --imgHeight 256 \
                               --dataloaderNum 0 \
@@ -27,7 +27,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 nohup python -u ./Source/main.py\
                               --lr 0.001 \
                               --dist false \
                               --modelName BodyReconstruction \
-                              --modelDir ./Checkpoint/ \
+                              --modelDir ./Checkpoint1/ \
                               --port ${dist_port} \
                               --mask true \
                               --dataset thuman2.0 > TrainRun.log 2>&1 &

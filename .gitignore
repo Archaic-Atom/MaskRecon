@@ -3,6 +3,7 @@ RealImg/
 *previous*/
 Submission/
 *Checkpoint*/
+
 *log/
 *Log/
 Example/
@@ -15,3 +16,8 @@ STTStereo.sublime-workspace
 *.log
 *.out
 *.zip
+
+Scripts/
+Source/
+Datasets/
+SampleImg/

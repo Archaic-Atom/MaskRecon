@@ -6,6 +6,8 @@ from torchvision import transforms
 #sys.path.append("./Source/UserModelImplementation/Models/BodyReconstruction")
 from .submodel import UNet, SUNet, RecoverySizeX4, FeatureFusion
 from .extractor import BasicEncoder
+import time 
+from torchstat import stat
 
 class ColorModel(nn.Module):
     """docstring for ColorModel"""
@@ -24,8 +26,6 @@ class ColorModel(nn.Module):
     
     
     def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
-        #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
-        #                         inter_mode='bilinear')
         color_feature = self.color_extarction(color_img, name = "color_feature")
 
         # print features
@@ -34,7 +34,10 @@ class ColorModel(nn.Module):
         #pic.save('color_feature.jpg')
 
         condition_feature = self.condition_extraction(torch.cat((depth_img, uv_img), dim=1), name = "color_condition_feature")       
+        start_time = time.time()
         all_feature = self.feature_fusion(color_feature, condition_feature)
+        end_time = time.time()
+        print("MFF time {:.2f}".format(end_time - start_time))
         color_front = self.color_net(all_feature)
 
         #color_front = self.color_net(color_feature)
@@ -60,13 +63,11 @@ class DepthModel(nn.Module):
     
     
     def forward(self, color_img: torch.tensor, depth_img: torch.tensor, uv_img: torch.tensor) -> torch.tensor:
-        #color_front = self.color_net(torch.cat((color_img, depth_img), dim=1),
-        #                         inter_mode='bilinear')
         depth_feature = self.depth_extarction(depth_img, name = "depth_feature")
         condition_feature = self.condition_extraction(torch.cat((color_img, uv_img), dim=1), name = "depth_condition_feature")       
         all_feature = self.feature_fusion(depth_feature, condition_feature)
         depth_front = self.depth_net(all_feature)
-        #depth_front = self.depth_net(depth_feature)
+        # depth_front = self.depth_net(depth_feature)
         if self.training and self.mask:
             recovery_depth = self.recovery_depth(depth_feature)
             return [depth_front, recovery_depth]

@@ -138,10 +138,9 @@ class DataSaver(object):
         #depth_b = depth_b * float(1.8)
 
  
-        #self._remove_outliers_1(depth_f)
-        self._remove_outliers_1(depth_b) 
-        self._remove_outliers_2(depth_b)
-        #self._remove_outliers_2(depth_f)
+        #self._remove_outliers_1(depth_b) 
+        #self._remove_outliers_2(depth_b)
+ 
 
 
         #_, crop_h, crop_w = depth_f.shape
@@ -161,19 +160,11 @@ class DataSaver(object):
         # convert the images to 3D mesh
         fpct = np.concatenate((x_cord, y_cord, depth_f, color_f), axis=0)
         bpct = np.concatenate((x_cord, y_cord, depth_b, color_b), axis=0)
-        #print("fpct:", fpct.shape)
-        # dilate for the edge point interpolation
-        #fpct = self._dilate(fpct, 1)
-        #bpct = self._dilate(bpct, 1)
-        #fpct = self._erode(fpct, 1)
-        #bpct = self._erode(bpct, 1)
-        #print("fpct:", fpct.shape)
         fpc = np.transpose(fpct, [1, 2, 0])
         bpc = np.transpose(bpct, [1, 2, 0])
 
         self._remove_points(bpc)
         self._remove_outliers(bpc)
-         
         self._remove_points_1(fpc, bpc)
         
         # get the edge region for the edge point interpolation
@@ -206,11 +197,11 @@ class DataSaver(object):
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
         self._ply_from_array_color(mesh.vertices, mesh.visual.vertex_colors, 
                                     mesh.faces, path_ply)
-        #self._save_obj_mesh_with_color(path_obj, mesh.vertices, mesh.faces, mesh.visual.vertex_colors)
-        points[:, 0] = -points[:, 0]
-        vertices = points[:, 0:3]
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
-        self._save_obj_mesh_without_color(path_obj, mesh.vertices, mesh.faces)
+
+        #points[:, 0] = -points[:, 0]
+        #vertices = points[:, 0:3]
+        #mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=colors)
+        #self._save_obj_mesh_without_color(path_obj, mesh.vertices, mesh.faces)
         
         '''
         #处理噪声 加强背面颜色
@@ -369,16 +360,9 @@ class DataSaver(object):
         data0 = data[mask]
         mean = np.mean(data0[:,2])
         std = np.std(data0[:,2])
-        max = np.max(data0[:,2])
-        min = np.min(data0[:,2])      
-        llim = 100
         ulim = mean + 3*std
         mask_ulim = data[:,:,2] > ulim
-        #mask_llim = data < llim
         data[mask_ulim] = 0
-        #data[mask_llim] = 0
-
-        #print(mean, std, max, min, ulim, llim)
         return data
 
     def _remove_outliers_2(self, data):

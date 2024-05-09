@@ -61,9 +61,8 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
         ngf = 64
         self.model_color = ColorModel(ngf=ngf, mask=args.mask)
         self.model_depth = DepthModel(ngf=ngf, mask=args.mask)
-        #self.generator = GeneratorModel(in_channel=7, ngf=ngf, mask=args.mask)
         self.disc_color = NLayerDiscriminator(input_nc=3, ndf=32, n_layers=3)
-        self.disc_depth = NLayerDiscriminator(input_nc=3, ndf=32, n_layers=3)
+        self.disc_depth = NLayerDiscriminator(input_nc=1, ndf=32, n_layers=3)
         return [self.model_color, self.model_depth, self.disc_color, self.disc_depth]
 
     def optimizer(self, model: list, lr: float) -> list:
@@ -140,7 +139,6 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                 with torch.no_grad():
                     fake_prob_color = self.disc_color(self.output_G_color) 
                     if args.mask:
-                        #print(fake_images[0].shape, fake_prob_color.shape)
                         return [fake_images[0], fake_prob_color, fake_images[1]] 
                         
                     return [fake_images[0], fake_prob_color] 
@@ -148,6 +146,8 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                 fake_images = model(input_data[self.COLOR_ID], 
                                             input_data[self.DEPTH_ID], 
                                             input_data[self.UV_ID])
+                print(input_data[self.COLOR_ID].shape,input_data[self.DEPTH_ID].shape, 
+                                            input_data[self.UV_ID].shape)
                 return [fake_images[0], input_data[self.COLOR_ID]]
 
         if self.MODEL_DEPTH_ID == model_id:
@@ -163,6 +163,7 @@ class BodyReconstructionInterface(jf.UserTemplate.ModelHandlerTemplate):
                      
                     if args.mask:
                         return [fake_images[0], normal_pre, fake_prob, fake_images[1]]
+                        
                     return [fake_images[0], normal_pre, fake_prob]
             else:
                 depth_front = model(input_data[self.COLOR_ID], 

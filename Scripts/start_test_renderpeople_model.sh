@@ -8,10 +8,10 @@ evalution_format='training'
 echo "test gpus id: "${test_gpus_id}
 echo "the list path is: "${test_list_path}
 echo "start to predict depth map"
-CUDA_VISIBLE_DEVICES=0,1,2,3 python -u Source/main.py \
+CUDA_VISIBLE_DEVICES=4 python -u Source/main.py \
                         --mode test \
-                        --batchSize 16 \
-                        --gpu 4 \
+                        --batchSize 4 \
+                        --gpu 1 \
                         --trainListPath ./Datasets/renderpeople_testing_list.csv \
                         --imgWidth 512 \
                         --imgHeight 512 \
@@ -25,9 +25,10 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 python -u Source/main.py \
                         --modelName BodyReconstruction \
                         --outputDir ./DebugResult/ \
                         --resultImgDir ./ResultImg/\
-                        --modelDir ./Checkpoint/ \
+                        --modelDir ./Checkpoint_best/ \
                         --dataset thuman2.0 \
                         --save_mesh True\
+                        --mask False\
 
 
 echo "Finish!"
