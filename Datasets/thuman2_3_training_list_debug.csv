@@ -1,2 +1,0 @@
-color_img,depth_img,uv_img,color_gt,depth_gt
-/home/lixing/Documents/BodyReconstruction_test/RenderPeople/RENDER/rp_adanna_posed_001/0000_0_00.jpg,/home/lixing/Documents/BodyReconstruction_test/RenderPeople/DEPTH/rp_adanna_posed_001/0000_0_00.png,/home/lixing/Documents/BodyReconstruction_test/RenderPeople/UV/rp_adanna_posed_001/0000_0_00.0001.png,/home/lixing/Documents/BodyReconstruction_test/RenderPeople/RENDER_GT/rp_adanna_posed_001/0180_0_00.jpg,/home/lixing/Documents/BodyReconstruction_test/RenderPeople/DEPTH_GT/rp_adanna_posed_001/0180_0_00.png

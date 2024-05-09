@@ -1,20 +1,37 @@
 >This is a project for human 3d reconstruction.
+# MaskRecon: High-quality Human Reconstruction via Masked Autoencoders Using a Single RGB-D image
 
----
+![image](assets/teaser.png)
+
+> MaskRecon: High-quality Human Reconstruction via Masked Autoencoders Using a Single RGB-D image
+> Xing Li, Yangyu Fan, Zhe Guo, Zhibo Rao, Yu Duan, Shiya Liu
+
+We plan to release the training and testing code of MaskRecon in this repository as soon as possible.  Any discussions or questions would be welcome!
+
+## Installation
+
+Please see [INSTALL.md](INSTALL.md) for manual installation.
+
+## Pretrained model
+
+We will provide the pretrained diffusion models for stereo matching including 20 degree and 45 degree as soon as possible. You can download and put them into the `checkpoints/` directory.
+
+[Download: pretrained model](https://mailstsinghuaeducn-my.sharepoint.com/:u:/g/personal/shaorz20_mails_tsinghua_edu_cn/EUgJEhePS11On81j2r7NGj8Bj8XZmRc0LqhD7kxUrNJBJA?e=TXXoPg)
+
+
+
 ### Software Environment
 1. OS Environment
 ```
+os >= linux 16.04
 cudaToolKit == 10.1
 cudnn == 7.3.6
 ```
 
-2. Python Environment (We provide the whole env in )
+2. Python Environment 
 ```
-python >= 3.8.5
+python == 3.8.5
 pythorch >= 1.15.0
-numpy >= 1.14.5
-opencv >= 3.4.0
-PIL >= 5.1.0
 ```
 ---
 ### Hardware Environment
@@ -69,9 +86,41 @@ BodyReconstruction
 ├── LICENSE
 └── README.md
 ```
+
 ---
+### Structure of DEMO samples on the RenderPeople dataset
+SampleImg
+├── RENDER
+│   └── rp_adanna_posed_001
+│       ├── xxx.jpg --- the RGB image of view xxx 
+├── DEPTH
+│   └── rp_adanna_posed_001
+│       ├── xxx.png --- the depth map of view xxx 
+└── UV
+    └── rp_adanna_posed_001
+        ├── xxx.png --- the UV map of view xxx (obtained by DensePose)
+---
+
+### Visualization on Reconstructed 3D human on real-world
+The results will be saved in `results`. To visualize the results, use [MeshLab]() to open `results/0000_mesh.ply`. The real data sourced from NormalGAN, which were collected using the Kinect V2 depth camera.
+
+![video](assets/video_real_demo.gif)
+
+### Visualization on comparisons
+We compare MaskRecon with PIFuHD, ICON, ECON, PIFu, and PIFu retained using RGBD images.
+![video](assets/video_comparison.gif)
+
+## Acknowledgments
+
+Our project is benefit from these great resources:
+
+- [NormalGAN: Learning Detailed 3D Human from a Single RGB-D Image](https://github.com/LizhenWangT/NormalGAN)
+- [PIFu: Pixel-Aligned Implicit Function for High-Resolution Clothed Human Digitization](https://github.com/shunsukesaito/PIFu)
+
+Thanks for their sharing code.
+
 ### Update log
-#### 2022-01-01
-1. Add the normal map for loss functions and output;
+#### 2024-05-09
+1. Write ReadMe;
 
  
