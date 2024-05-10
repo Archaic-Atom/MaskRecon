@@ -66,7 +66,7 @@ BodyReconstruction
 │   ├── clean.sh         # clean the project
 │   ├── generate_path.sh # generate the tranining or testing list like kitti2015_val_list
 │   ├── start_train_dataset_model.sh # start training command
-│   ├── start_test_dataset_model.sh # start training command
+│   ├── start_test_dataset_model.sh  # start training command
 │   └── ...
 ├── Source # source code
 │   ├── UserModelImplementation
