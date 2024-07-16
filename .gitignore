@@ -1,6 +1,5 @@
 .DS_Store
 
-ResultImg/
 RealImg/
 *previous*/
 Submission/
@@ -9,7 +8,7 @@ Submission/
 *log/
 *Log/
 Example/
-*Result*/
+*Result/
 /*__pycache__*/
 sftp-config*.json
 *.pyc
@@ -19,7 +18,7 @@ STTStereo.sublime-workspace
 *.out
 *.zip
 
-Scripts/
-Source/
-Datasets/
-SampleImg/
+
+
+
+

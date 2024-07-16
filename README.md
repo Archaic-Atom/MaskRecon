@@ -39,7 +39,7 @@ $ ./install.sh
 
 1. Get the Training list or Testing list （You need rewrite the code by your path, and my related demo code can be found in Source/Tools/genrate_**_traning_path.py）
 ```
-$ python ./Scripts/generate_thuman_training_path.py
+$ python ./Scripts/generate_thuman3_training_val_path.py
 ```
 
 2. Train the program, like:
@@ -49,7 +49,7 @@ $ ./Scripts/start_train_thuman_model.sh
 
 3. Test the program, like:
 ```
-$ ./Scripts/start_test_renderpeople_model.sh
+$ ./Scripts/start_test.sh
 ```
 
 ---

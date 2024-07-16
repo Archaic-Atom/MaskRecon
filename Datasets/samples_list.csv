@@ -1,0 +1,3 @@
+color_img,depth_img,uv_img,color_gt,depth_gt
+./Samples/RENDER/rp_adanna_posed_001/0000_0_00.jpg,./Samples/DEPTH/rp_adanna_posed_001/0000_0_00.png,./Samples/UV/rp_adanna_posed_001/0000_0_00.0001.png,,
+./Samples/RENDER/rp_adanna_posed_010/0000_0_00.jpg,./Samples/DEPTH/rp_adanna_posed_010/0000_0_00.png,./Samples/UV/rp_adanna_posed_010/0000_0_00.0001.png,,
